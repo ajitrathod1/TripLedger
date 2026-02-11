@@ -84,6 +84,7 @@ const TripSummaryScreen = () => {
     const progress = Math.min(totalSpent / (currentTrip.totalBudget || 1), 1);
 
     // Prepare Chart Data
+    // Aggregates expenses by category for visualization
     const categories = ['Travel', 'Food', 'Stay', 'Activities', 'Shopping', 'Other'];
     const chartData = categories.map(cat => {
         const amount = expenses.filter(e => e.category === cat).reduce((sum, e) => sum + e.amount, 0);

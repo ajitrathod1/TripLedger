@@ -7,8 +7,11 @@ export const colors = {
   border: '#E0E0E0',
   success: '#4CAF50',
   error: '#F44336',
+  warning: '#FF9800', // Warning Orange
+  info: '#2196F3', // Info Blue
   white: '#FFFFFF',
   gray: '#9E9E9E',
+  darkGray: '#616161',
   lightGray: '#F5F5F5',
   shadowConfig: {
     shadowColor: '#000',

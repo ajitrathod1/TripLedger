@@ -31,6 +31,8 @@ const SettleUpScreen = () => {
     });
 
     // Generate Transactions
+    // Greedy algorithm to minimize number of transactions
+    // 1. Separate people into debtors (owes money) and creditors (owed money)
     const debtors = [];
     const creditors = [];
 
@@ -43,6 +45,7 @@ const SettleUpScreen = () => {
     let i = 0;
     let j = 0;
 
+    // 2. Match debtors with creditors until everything is settled
     while (i < debtors.length && j < creditors.length) {
         const debt = debtors[i];
         const credit = creditors[j];

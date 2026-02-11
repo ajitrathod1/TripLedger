@@ -1,27 +1,33 @@
 export const colors = {
-  primary: '#8E2DE2', // Modern Purple
-  secondary: '#4A00E0',
-  background: '#121212', // Dark Mode
-  surface: '#1E1E1E',
-  text: '#FFFFFF',
-  textSecondary: '#B0B0B0',
-  border: 'rgba(255, 255, 255, 0.1)',
-  success: '#00C853', // Bright Green
-  error: '#FF3D00', // Bright Red
-  warning: '#FFD600',
-  info: '#2979FF',
-  white: '#FFFFFF',
-  gray: '#9E9E9E',
-  darkGray: '#424242',
-  lightGray: '#2C2C2C', // Darker gray for dark mode
-  gradientStart: '#141E30',
-  gradientEnd: '#243B55',
+  primary: '#7F5AF0', // Vivid Purple
+  secondary: '#2Cb67D',
+  background: '#16161a', // Very Dark
+  surface: '#242629',    // Dark Gray Card
+  text: '#fffffe',       // White
+  textSecondary: '#94a1b2', // Grayish Blue
+  border: '#010101',
+  success: '#2Cb67D',
+  error: '#ef4565',
+  warning: '#ff8906',
+  info: '#3da9fc',
+  white: '#fffffe',
+  gray: '#94a1b2',
+  darkGray: '#242629',
+  lightGray: '#16161a',
+  gradientStart: '#16161a', // Using solid like gradient for consistency
+  gradientEnd: '#242629',
+  // Reverting "glass" to be a Solid Card style for better readability
   glass: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#242629', // Solid Card Color
+    borderColor: 'rgba(255, 255, 255, 0.05)',
     borderWidth: 1,
-    borderRadius: 20,
+    borderRadius: 16,
     overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
   },
   shadowConfig: {
     shadowColor: '#000',

@@ -1,8 +1,10 @@
 {
   "expo": {
     "name": "TripLedger",
-    "slug": "TripLedger",
+    "slug": "tripledger-app",
     "version": "1.0.0",
+    "description": "Expense Manager for Group Trips",
+    "scheme": "tripledger",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

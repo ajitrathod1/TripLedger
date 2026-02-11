@@ -2,13 +2,20 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { colors } from '../constants/colors';
 
-const CustomButton = ({ title, onPress, loading = false, style, textStyle }) => {
+/**
+ * Reusable Button Component with loading state
+ */
+const CustomButton = ({ title, onPress, loading = false, disabled = false, style, textStyle }) => {
     return (
         <TouchableOpacity
             activeOpacity={0.8}
             onPress={onPress}
-            style={[styles.button, style]}
-            disabled={loading}
+            style={[
+                styles.button,
+                style,
+                (disabled || loading) && { opacity: 0.6 } // Visual feedback for disabled state
+            ]}
+            disabled={loading || disabled}
         >
             {loading ? (
                 <ActivityIndicator color={colors.white} />

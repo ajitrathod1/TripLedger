@@ -1,23 +1,33 @@
 import React from 'react';
 import { View, StyleSheet, StatusBar, SafeAreaView, Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../constants/colors';
 
 const ScreenWrapper = ({ children, style }) => {
     return (
-        <SafeAreaView style={[styles.container, style]}>
-            <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
-            <View style={styles.content}>
-                {children}
-            </View>
-        </SafeAreaView>
+        <LinearGradient
+            colors={[colors.gradientStart, colors.gradientEnd]}
+            style={styles.container}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+        >
+            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+            <SafeAreaView style={[styles.safeArea, style]}>
+                <View style={styles.content}>
+                    {children}
+                </View>
+            </SafeAreaView>
+        </LinearGradient>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: colors.background,
-        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    },
+    safeArea: {
+        flex: 1,
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 0,
     },
     content: {
         flex: 1,

@@ -105,7 +105,7 @@ const AddExpenseScreen = () => {
                                 ]}
                                 onPress={() => setPaidBy(member)}
                             >
-                                <Ionicons name="person-circle-outline" size={20} color={paidBy === member ? colors.white : colors.primary} />
+                                <Ionicons name="person-circle-outline" size={20} color={paidBy === member ? colors.white : colors.text} />
                                 <Text style={[
                                     styles.memberText,
                                     paidBy === member && styles.activeMemberText
@@ -178,14 +178,11 @@ const styles = StyleSheet.create({
     chip: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.surface,
+        ...colors.glass,
         paddingHorizontal: 16,
         paddingVertical: 10,
-        borderRadius: 20,
         marginRight: 10,
         marginBottom: 10,
-        borderWidth: 1,
-        borderColor: colors.border,
     },
     activeChip: {
         backgroundColor: colors.primary,
@@ -202,20 +199,17 @@ const styles = StyleSheet.create({
     memberChip: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.white,
+        ...colors.glass,
         paddingHorizontal: 16,
         paddingVertical: 10,
-        borderRadius: 20,
         marginRight: 10,
-        borderWidth: 1,
-        borderColor: colors.primary,
     },
     activeMemberChip: {
         backgroundColor: colors.primary,
     },
     memberText: {
         marginLeft: 6,
-        color: colors.primary,
+        color: colors.text,
         fontWeight: '600',
     },
     activeMemberText: {

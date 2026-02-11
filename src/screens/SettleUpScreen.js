@@ -155,11 +155,9 @@ const styles = StyleSheet.create({
     },
     summaryContainer: {
         flexDirection: 'row',
-        backgroundColor: colors.primary,
-        borderRadius: 16,
+        ...colors.glass,
         padding: 20,
         marginBottom: 30,
-        ...colors.shadowConfig,
     },
     summaryBox: {
         flex: 1,
@@ -175,7 +173,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     summaryValue: {
-        color: colors.white,
+        color: colors.text,
         fontSize: 20,
         fontWeight: 'bold',
     },
@@ -188,12 +186,9 @@ const styles = StyleSheet.create({
     transactionCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.white,
+        ...colors.glass,
         padding: 16,
-        borderRadius: 12,
         marginBottom: 12,
-        borderWidth: 1,
-        borderColor: colors.lightGray,
     },
     avatarContainer: {
         width: 40,

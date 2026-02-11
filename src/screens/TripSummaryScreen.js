@@ -103,7 +103,7 @@ const TripSummaryScreen = () => {
             {/* Custom Header with Settle Up and Delete button */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.navigate('CreateTrip')} style={{ marginRight: 10 }}>
-                    <Ionicons name="add-circle-outline" size={32} color={colors.primary} />
+                    <Ionicons name="add-circle-outline" size={32} color={colors.text} />
                 </TouchableOpacity>
                 <View style={{ flex: 1 }}>
                     <Text style={styles.headerTitle}>{currentTrip.name}</Text>
@@ -111,7 +111,7 @@ const TripSummaryScreen = () => {
                 </View>
                 <View style={{ flexDirection: 'row' }}>
                     <TouchableOpacity onPress={() => navigation.navigate('SettleUp')} style={{ marginRight: 15 }}>
-                        <Ionicons name="people-circle-outline" size={32} color={colors.primary} />
+                        <Ionicons name="people-circle-outline" size={32} color={colors.text} />
                     </TouchableOpacity>
                     <TouchableOpacity onPress={handleDeleteTrip}>
                         <Ionicons name="trash-outline" size={32} color={colors.error} />
@@ -149,7 +149,7 @@ const TripSummaryScreen = () => {
                             width={screenWidth - 40}
                             height={220}
                             chartConfig={{
-                                color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+                                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                             }}
                             accessor={"population"}
                             backgroundColor={"transparent"}
@@ -210,9 +210,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 20,
         paddingVertical: 15,
-        backgroundColor: colors.white,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.lightGray,
     },
     headerTitle: {
         fontSize: 20,
@@ -228,11 +225,9 @@ const styles = StyleSheet.create({
         paddingBottom: 100,
     },
     card: {
-        backgroundColor: colors.white,
-        borderRadius: 16,
+        ...colors.glass,
         padding: 20,
         marginTop: 20,
-        ...colors.shadowConfig,
     },
     budgetRow: {
         flexDirection: 'row',
@@ -283,12 +278,9 @@ const styles = StyleSheet.create({
     expenseItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: colors.white,
+        ...colors.glass,
         padding: 15,
-        borderRadius: 12,
         marginBottom: 12,
-        borderWidth: 1,
-        borderColor: colors.lightGray,
     },
     iconBox: {
         width: 40,

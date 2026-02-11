@@ -102,13 +102,11 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 28,
         fontWeight: 'bold',
-        color: colors.primary,
+        color: colors.text,
     },
     form: {
-        backgroundColor: colors.white,
-        borderRadius: 20,
+        ...colors.glass,
         padding: 20,
-        ...colors.shadowConfig,
     },
     row: {
         flexDirection: 'row',

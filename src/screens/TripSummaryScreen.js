@@ -1,14 +1,13 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator, Alert, Animated, ImageBackground } from 'react-native';
 import ScreenWrapper from '../components/ScreenWrapper';
-import CustomButton from '../components/CustomButton';
 import SkeletonLoader from '../components/SkeletonLoader';
-import { colors } from '../constants/colors';
 import { useTripContext } from '../context/TripContext';
 import { PieChart } from 'react-native-chart-kit';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTheme } from '../context/ThemeContext';
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -35,10 +34,13 @@ const categoryIcons = {
 const TripSummaryScreen = () => {
     const { currentTrip, loading, deleteTrip, deleteExpense } = useTripContext();
     const navigation = useNavigation();
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
 
     // Animation Values
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
+    const scrollY = useRef(new Animated.Value(0)).current;
 
     useEffect(() => {
         Animated.parallel([
@@ -103,7 +105,7 @@ const TripSummaryScreen = () => {
         return (
             <ScreenWrapper>
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <ActivityIndicator size="large" color={colors.primary} />
+                    <ActivityIndicator size="large" color={theme.primary} />
                 </View>
             </ScreenWrapper>
         );
@@ -131,10 +133,15 @@ const TripSummaryScreen = () => {
     return (
         <ScreenWrapper contentContainerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
 
-            <ScrollView
+            <Animated.ScrollView
                 style={{ flex: 1 }}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: 100 }}
+                onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: true }
+                )}
+                scrollEventThrottle={16}
             >
                 {/* Header Image */}
                 <ImageBackground
@@ -142,21 +149,25 @@ const TripSummaryScreen = () => {
                     style={styles.headerImage}
                 >
                     <LinearGradient
-                        colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(255,255,255,1)']}
+                        colors={['rgba(0,0,0,0.3)', 'transparent']}
                         style={styles.headerGradient}
+                    />
+                    <LinearGradient
+                        colors={['transparent', theme.background]}
+                        style={[styles.headerGradient, { top: undefined, height: 100, bottom: -2 }]}
                     />
 
                     {/* Header Controls */}
                     <View style={styles.headerControls}>
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.glassBtn}>
-                            <Ionicons name="arrow-back" size={24} color="#fff" />
+                            <Ionicons name="arrow-back" size={24} color={theme.text} />
                         </TouchableOpacity>
                         <View style={{ flexDirection: 'row', gap: 10 }}>
                             <TouchableOpacity onPress={() => navigation.navigate('SettleUp')} style={styles.glassBtn}>
-                                <Ionicons name="filter-outline" size={22} color="#fff" />
+                                <Ionicons name="filter-outline" size={22} color={theme.text} />
                             </TouchableOpacity>
                             <TouchableOpacity onPress={handleDeleteTrip} style={[styles.glassBtn, { backgroundColor: 'rgba(229, 57, 53, 0.8)' }]}>
-                                <Ionicons name="trash-outline" size={22} color="#fff" />
+                                <Ionicons name="trash-outline" size={22} color={theme.text} />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -164,7 +175,7 @@ const TripSummaryScreen = () => {
                     <View style={styles.headerTitleContainer}>
                         <Text style={styles.tripNameLarge}>{currentTrip.name}</Text>
                         <View style={styles.locationTag}>
-                            <Ionicons name="location" size={14} color="#fff" />
+                            <Ionicons name="location" size={14} color={theme.text} />
                             <Text style={styles.locationText}>{currentTrip.destination}</Text>
                         </View>
                     </View>
@@ -184,7 +195,7 @@ const TripSummaryScreen = () => {
                                 </View>
                                 <View style={{ alignItems: 'flex-end' }}>
                                     <Text style={styles.label}>Remaining</Text>
-                                    <Text style={[styles.valueRight, { color: remaining < 0 ? '#E53935' : '#2A9D8F' }]}>
+                                    <Text style={[styles.valueRight, { color: remaining < 0 ? theme.error : theme.success }]}>
                                         ₹{remaining.toLocaleString()}
                                     </Text>
                                 </View>
@@ -192,7 +203,7 @@ const TripSummaryScreen = () => {
 
                             {/* Progress Bar */}
                             <View style={styles.progressBarContainer}>
-                                <View style={[styles.progressBarFill, { width: `${progress * 100}%`, backgroundColor: remaining < 0 ? '#E53935' : '#2A9D8F' }]} />
+                                <View style={[styles.progressBarFill, { width: `${progress * 100}%`, backgroundColor: remaining < 0 ? theme.error : theme.success }]} />
                             </View>
                             <Text style={styles.progressText}>
                                 You've spent <Text style={{ fontFamily: 'Outfit-Bold' }}>{Math.round(progress * 100)}%</Text> of your budget
@@ -203,7 +214,7 @@ const TripSummaryScreen = () => {
                         <View style={styles.chartSection}>
                             <View style={styles.pieWrapper}>
                                 <PieChart
-                                    data={chartData.length > 0 ? chartData : [{ population: 1, color: '#F0F0F0' }]}
+                                    data={chartData.length > 0 ? chartData : [{ population: 1, color: theme.surfaceHighlight }]}
                                     width={screenWidth * 0.5}
                                     height={160}
                                     chartConfig={{ color: () => `rgba(0,0,0,0.5)` }}
@@ -243,27 +254,50 @@ const TripSummaryScreen = () => {
                         {/* Expense List */}
                         {expenses.length === 0 ? (
                             <View style={styles.emptyState}>
-                                <Ionicons name="receipt-outline" size={48} color="#ddd" />
+                                <Ionicons name="receipt-outline" size={48} color={theme.textSecondary} />
                                 <Text style={styles.emptyText}>No expenses added yet.</Text>
                             </View>
                         ) : (
-                            expenses.map((expense, index) => (
-                                <TouchableOpacity key={expense.id} style={styles.expenseCard} onLongPress={() => handleDeleteExpense(expense.id)}>
-                                    <View style={[styles.iconContainer, { backgroundColor: getCategoryColor(expense.category) + '15' }]}>
-                                        <Ionicons name={categoryIcons[expense.category]} size={20} color={getCategoryColor(expense.category)} />
-                                    </View>
-                                    <View style={styles.expenseInfo}>
-                                        <Text style={styles.expenseTitle}>{expense.title}</Text>
-                                        <Text style={styles.expenseCategory}>{expense.category} • {expense.paidBy}</Text>
-                                    </View>
-                                    <Text style={styles.expenseAmount}>- ₹{expense.amount.toLocaleString()}</Text>
-                                </TouchableOpacity>
-                            ))
+                            expenses.map((expense, index) => {
+                                const inputRange = [-1, 0, (index * 70), (index + 2) * 70];
+                                const scale = scrollY.interpolate({
+                                    inputRange,
+                                    outputRange: [1, 1, 1, 0.95],
+                                    extrapolate: 'clamp'
+                                });
+                                const opacity = scrollY.interpolate({
+                                    inputRange,
+                                    outputRange: [1, 1, 1, 0.8],
+                                    extrapolate: 'clamp'
+                                });
+
+                                return (
+                                    <Animated.View
+                                        key={expense.id}
+                                        style={{ transform: [{ scale }], opacity }}
+                                    >
+                                        <TouchableOpacity
+                                            style={styles.expenseCard}
+                                            onLongPress={() => handleDeleteExpense(expense.id)}
+                                            activeOpacity={0.7}
+                                        >
+                                            <View style={[styles.iconContainer, { backgroundColor: getCategoryColor(expense.category) + '30' }]}>
+                                                <Ionicons name={categoryIcons[expense.category]} size={20} color={theme.text} />
+                                            </View>
+                                            <View style={styles.expenseInfo}>
+                                                <Text style={styles.expenseTitle}>{expense.title}</Text>
+                                                <Text style={styles.expenseCategory}>{expense.category} • {expense.paidBy}</Text>
+                                            </View>
+                                            <Text style={styles.expenseAmount}>- ₹{expense.amount.toLocaleString()}</Text>
+                                        </TouchableOpacity>
+                                    </Animated.View>
+                                );
+                            })
                         )}
 
                     </Animated.View>
                 </View>
-            </ScrollView>
+            </Animated.ScrollView>
 
             {/* Floating Action Button */}
             <View style={styles.fabContainer}>
@@ -280,7 +314,7 @@ const TripSummaryScreen = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
     headerImage: {
         width: '100%',
         height: 280,
@@ -302,7 +336,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.2)',
+        borderColor: theme.border,
     },
     headerTitleContainer: {
         position: 'absolute',
@@ -312,7 +346,7 @@ const styles = StyleSheet.create({
     tripNameLarge: {
         fontSize: 32,
         fontFamily: 'Outfit-Bold',
-        color: '#fff',
+        color: theme.text,
         textShadowColor: 'rgba(0,0,0,0.3)',
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 4,
@@ -328,7 +362,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
     },
     locationText: {
-        color: '#fff',
+        color: theme.text,
         marginLeft: 6,
         fontFamily: 'Outfit-Medium',
         fontSize: 14,
@@ -337,24 +371,24 @@ const styles = StyleSheet.create({
         marginTop: -30,
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
-        backgroundColor: '#fff',
+        backgroundColor: theme.background,
         paddingHorizontal: 20,
         paddingTop: 30,
         paddingBottom: 100,
         minHeight: 500,
     },
     budgetCard: {
-        backgroundColor: '#fff',
+        backgroundColor: theme.surface,
         borderRadius: 24,
         padding: 20,
         marginBottom: 20,
-        shadowColor: "#000",
+        shadowColor: theme.shadowConfig?.shadowColor || "#000",
         shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.05,
+        shadowOpacity: 0.2,
         shadowRadius: 15,
         elevation: 2,
         borderWidth: 1,
-        borderColor: '#F0F0F0',
+        borderColor: theme.border,
     },
     budgetRow: {
         flexDirection: 'row',
@@ -363,14 +397,14 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 12,
-        color: '#909090',
+        color: theme.textSecondary,
         fontFamily: 'Outfit-Regular',
         marginBottom: 4,
     },
     valuePrimary: {
         fontSize: 22,
         fontFamily: 'Outfit-Bold',
-        color: '#264653',
+        color: theme.text,
     },
     valueRight: {
         fontSize: 22,
@@ -378,7 +412,7 @@ const styles = StyleSheet.create({
     },
     progressBarContainer: {
         height: 8,
-        backgroundColor: '#F1F3F5',
+        backgroundColor: theme.surfaceHighlight, // Subtle track
         borderRadius: 4,
         marginBottom: 10,
         overflow: 'hidden',
@@ -389,24 +423,24 @@ const styles = StyleSheet.create({
     },
     progressText: {
         fontSize: 12,
-        color: '#909090',
+        color: theme.textSecondary,
         textAlign: 'right',
         fontFamily: 'Outfit-Regular',
     },
     chartSection: {
         flexDirection: 'row',
-        backgroundColor: '#fff',
+        backgroundColor: theme.surface,
         borderRadius: 24,
         padding: 20,
         marginBottom: 25,
         alignItems: 'center',
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.05,
+        shadowOpacity: 0.2,
         shadowRadius: 15,
         elevation: 2,
         borderWidth: 1,
-        borderColor: '#F0F0F0',
+        borderColor: theme.border,
     },
     pieWrapper: {
         position: 'relative',
@@ -421,13 +455,13 @@ const styles = StyleSheet.create({
     },
     totalLabel: {
         fontSize: 10,
-        color: '#909090',
+        color: theme.textSecondary,
         fontFamily: 'Outfit-Regular',
     },
     totalValue: {
         fontSize: 14,
         fontFamily: 'Outfit-Bold',
-        color: '#333',
+        color: theme.text,
     },
     legendContainer: {
         marginLeft: 15,
@@ -447,13 +481,13 @@ const styles = StyleSheet.create({
     },
     legendName: {
         fontSize: 12,
-        color: '#909090',
+        color: theme.textSecondary,
         fontFamily: 'Outfit-Regular',
     },
     legendAmount: {
         fontSize: 14,
         fontFamily: 'Outfit-Bold',
-        color: '#333',
+        color: theme.text,
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -464,27 +498,27 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 18,
         fontFamily: 'Outfit-Bold',
-        color: '#333',
+        color: theme.text,
     },
     viewAll: {
         fontSize: 14,
-        color: '#2A9D8F',
+        color: theme.secondary,
         fontFamily: 'Outfit-Medium',
     },
     expenseCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#fff',
+        backgroundColor: theme.surface,
         padding: 16,
         borderRadius: 20,
         marginBottom: 12,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.03,
+        shadowOpacity: 0.1,
         shadowRadius: 8,
         elevation: 1,
         borderWidth: 1,
-        borderColor: '#F9F9F9',
+        borderColor: theme.border,
     },
     iconContainer: {
         width: 48,
@@ -500,18 +534,18 @@ const styles = StyleSheet.create({
     expenseTitle: {
         fontSize: 16,
         fontFamily: 'Outfit-Bold',
-        color: '#333',
+        color: theme.text,
         marginBottom: 4,
     },
     expenseCategory: {
         fontSize: 12,
-        color: '#909090',
+        color: theme.textSecondary,
         fontFamily: 'Outfit-Regular',
     },
     expenseAmount: {
         fontSize: 16,
         fontFamily: 'Outfit-Bold',
-        color: '#E53935',
+        color: theme.error,
     },
     emptyState: {
         alignItems: 'center',
@@ -522,7 +556,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
         fontFamily: 'Outfit-Regular',
         fontSize: 14,
-        color: '#909090',
+        color: theme.textSecondary,
     },
     fabContainer: {
         position: 'absolute',
@@ -537,16 +571,16 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: '#264653',
+        backgroundColor: theme.primary,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: "#264653",
+        shadowColor: theme.primary,
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.3,
         shadowRadius: 12,
         elevation: 8,
         borderWidth: 4,
-        borderColor: 'rgba(255,255,255,0.2)',
+        borderColor: theme.border,
     }
 });
 

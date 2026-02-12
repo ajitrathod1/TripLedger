@@ -2,16 +2,18 @@ import React from 'react';
 import { View, StyleSheet, StatusBar, SafeAreaView, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../constants/colors';
+import { useTheme } from '../context/ThemeContext';
 
 const ScreenWrapper = ({ children, style, contentContainerStyle }) => {
+    const { theme } = useTheme();
     return (
         <LinearGradient
-            colors={[colors.gradientStart, colors.gradientEnd]}
+            colors={[theme.gradientStart, theme.gradientEnd]}
             style={styles.container}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }} // Vertical subtle gradient
         >
-            <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+            <StatusBar barStyle={theme.statusBar} translucent backgroundColor="transparent" />
 
             {/* Optional light pattern could go here, but keeping it clean for now */}
 

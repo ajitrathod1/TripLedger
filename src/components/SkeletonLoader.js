@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated } from 'react-native';
-import { colors } from '../constants/colors';
+import { StyleSheet, Animated } from 'react-native';
+import { useTheme } from '../context/ThemeContext';
 
 const SkeletonLoader = ({ width = '100%', height = 20, style }) => {
     const opacity = useRef(new Animated.Value(0.3)).current;
+    const { theme } = useTheme();
 
     useEffect(() => {
         Animated.loop(
@@ -26,7 +27,7 @@ const SkeletonLoader = ({ width = '100%', height = 20, style }) => {
         <Animated.View
             style={[
                 styles.skeleton,
-                { width, height, opacity },
+                { width, height, opacity, backgroundColor: theme.surfaceHighlight || theme.border },
                 style
             ]}
         />
@@ -35,7 +36,6 @@ const SkeletonLoader = ({ width = '100%', height = 20, style }) => {
 
 const styles = StyleSheet.create({
     skeleton: {
-        backgroundColor: '#E0E0E0',
         borderRadius: 8,
     },
 });

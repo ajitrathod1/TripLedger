@@ -3,14 +3,16 @@ import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, Image } fr
 import ScreenWrapper from '../components/ScreenWrapper';
 import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
-import { colors } from '../constants/colors';
 import { useNavigation } from '@react-navigation/native';
 import { useTripContext } from '../context/TripContext';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../context/ThemeContext';
 
 const CreateTripScreen = () => {
     const navigation = useNavigation();
     const { addTrip } = useTripContext();
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
 
     const [tripName, setTripName] = useState('');
     const [destination, setDestination] = useState('');
@@ -62,7 +64,7 @@ const CreateTripScreen = () => {
         };
 
         addTrip(tripData);
-        navigation.navigate('TripSummary');
+        navigation.navigate('TripList'); // Changed from TripSummary to TripList for flow
     };
 
     const PRESET_COVERS = [
@@ -82,7 +84,7 @@ const CreateTripScreen = () => {
             >
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Ionicons name="arrow-back" size={28} color={colors.text} />
+                        <Ionicons name="arrow-back" size={28} color={theme.text} />
                     </TouchableOpacity>
                     <Text style={styles.title}>Create Trip</Text>
                 </View>
@@ -151,7 +153,7 @@ const CreateTripScreen = () => {
                                     <Image source={{ uri: img }} style={styles.coverThumb} />
                                     {coverImage === img && (
                                         <View style={styles.checkIcon}>
-                                            <Ionicons name="checkmark-circle" size={20} color={colors.primary} />
+                                            <Ionicons name="checkmark-circle" size={20} color={theme.primary} />
                                         </View>
                                     )}
                                 </TouchableOpacity>
@@ -161,8 +163,8 @@ const CreateTripScreen = () => {
                                 onPress={() => setCoverImage(null)}
                                 style={[styles.coverOption, !coverImage && styles.selectedCover, styles.noImageOption]}
                             >
-                                <Ionicons name="image-outline" size={24} color="#666" />
-                                <Text style={{ fontSize: 10, color: '#666', marginTop: 4 }}>None</Text>
+                                <Ionicons name="image-outline" size={24} color={theme.textSecondary} />
+                                <Text style={{ fontSize: 10, color: theme.textSecondary, marginTop: 4 }}>None</Text>
                             </TouchableOpacity>
                         </ScrollView>
                     </View>
@@ -174,7 +176,7 @@ const CreateTripScreen = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -184,31 +186,40 @@ const styles = StyleSheet.create({
     backButton: {
         zIndex: 10,
         padding: 5,
+        backgroundColor: theme.surface,
+        borderRadius: 12,
     },
     title: {
         fontSize: 28,
         fontWeight: 'bold',
-        color: colors.text,
+        color: theme.text,
         textAlign: 'center',
         flex: 1,
         marginRight: 30, // Balance back button
+        fontFamily: 'Outfit-Bold',
     },
     form: {
-        ...colors.glass,
+        backgroundColor: theme.surface, // Replaced glass
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: theme.border,
         padding: 20,
         marginBottom: 40,
     },
     membersSection: {
         marginVertical: 10,
-        backgroundColor: 'rgba(0,0,0,0.04)',
+        backgroundColor: theme.surfaceHighlight,
         padding: 15,
         borderRadius: 12,
+        borderWidth: 1,
+        borderColor: theme.border,
     },
     sectionTitle: {
-        color: colors.textSecondary,
+        color: theme.textSecondary,
         marginBottom: 10,
         fontSize: 14,
         fontWeight: 'bold',
+        fontFamily: 'Outfit-Medium',
     },
     coverSection: {
         marginTop: 10,
@@ -222,10 +233,10 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         borderWidth: 2,
         borderColor: 'transparent',
-        backgroundColor: '#eee',
+        backgroundColor: theme.surfaceHighlight,
     },
     selectedCover: {
-        borderColor: colors.primary,
+        borderColor: theme.primary,
         borderWidth: 3,
     },
     coverThumb: {
@@ -235,13 +246,15 @@ const styles = StyleSheet.create({
     noImageOption: {
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#e0e0e0',
+        backgroundColor: theme.surfaceHighlight,
+        borderWidth: 1,
+        borderColor: theme.border,
     },
     checkIcon: {
         position: 'absolute',
         top: 4,
         right: 4,
-        backgroundColor: '#fff',
+        backgroundColor: theme.white,
         borderRadius: 10,
         padding: 2,
     }

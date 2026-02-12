@@ -1,16 +1,18 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, Animated, Easing } from 'react-native';
 import ScreenWrapper from '../components/ScreenWrapper';
-import { colors } from '../constants/colors';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import Svg, { Path, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import { useTheme } from '../context/ThemeContext';
 
 const { width, height } = Dimensions.get('window');
 
 const HomeScreen = () => {
     const navigation = useNavigation();
     const isMounted = useRef(true);
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
 
     // Travel Evolution Animation State
     const [travelState, setTravelState] = React.useState(0);
@@ -23,11 +25,11 @@ const HomeScreen = () => {
     const slideAnim = useRef(new Animated.Value(50)).current;
 
     const modes = [
-        { icon: 'walk', color: '#4CAF50', size: 28, label: 'Start' },
-        { icon: 'bike', color: '#FF9800', size: 32, label: 'Explore' },
-        { icon: 'car-side', color: '#2196F3', size: 36, label: 'Drive' },
-        { icon: 'train-variant', color: '#9C27B0', size: 36, label: 'Journey' },
-        { icon: 'airplane-takeoff', color: '#E91E63', size: 40, label: 'Fly' },
+        { icon: 'walk', color: theme.success, size: 28, label: 'Start' },
+        { icon: 'bike', color: theme.warning, size: 32, label: 'Explore' },
+        { icon: 'car-side', color: theme.info, size: 36, label: 'Drive' },
+        { icon: 'train-variant', color: theme.secondary, size: 36, label: 'Journey' },
+        { icon: 'airplane-takeoff', color: theme.error, size: 40, label: 'Fly' },
     ];
 
     useEffect(() => {
@@ -112,18 +114,18 @@ const HomeScreen = () => {
                 <Svg width={width} height={height * 0.45} viewBox={`0 0 ${width} ${height * 0.45}`} style={styles.svg}>
                     <Defs>
                         <SvgLinearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                            <Stop offset="0" stopColor={colors.primary} stopOpacity="0.1" />
+                            <Stop offset="0" stopColor={theme.primary} stopOpacity="0.1" />
                             <Stop offset="1" stopColor="transparent" stopOpacity="0" />
                         </SvgLinearGradient>
                     </Defs>
                     <Path
                         d={`M0 0 L${width} 0 L${width} 150 Q${width / 2} 280 0 150 Z`}
-                        fill={colors.gradientStart}
+                        fill={theme.gradientStart}
                         opacity="0.5"
                     />
                     <Path
                         d={`M${width} 0 L${width} 120 Q${width / 2} 240 0 90 L0 0 Z`}
-                        fill={colors.primary}
+                        fill={theme.primary}
                         opacity="0.08"
                     />
                 </Svg>
@@ -133,10 +135,10 @@ const HomeScreen = () => {
                 {/* Logo */}
                 <Animated.View style={[styles.logoContainer, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
                     <View style={styles.logoCircle}>
-                        <Ionicons name="location" size={48} color={colors.white} />
+                        <Ionicons name="location" size={48} color={theme.white} />
                     </View>
                     <View style={styles.headphoneIcon}>
-                        <Ionicons name="headset" size={24} color={colors.primary} />
+                        <Ionicons name="headset" size={24} color={theme.primary} />
                     </View>
                 </Animated.View>
 
@@ -174,7 +176,7 @@ const HomeScreen = () => {
 
                 {/* Status Text */}
                 <Animated.View style={{ opacity: fadeAnim, marginTop: 40 }}>
-                    <Text style={{ fontFamily: 'Outfit-Medium', color: colors.primary, fontSize: 16 }}>
+                    <Text style={{ fontFamily: 'Outfit-Medium', color: theme.primary, fontSize: 16 }}>
                         {travelState === 4 ? "Taking off..." : "Planning journey..."}
                     </Text>
                 </Animated.View>
@@ -183,7 +185,7 @@ const HomeScreen = () => {
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
     topGraphics: {
         position: 'absolute',
         top: 0,
@@ -208,10 +210,10 @@ const styles = StyleSheet.create({
         width: 100,
         height: 100,
         borderRadius: 50,
-        backgroundColor: colors.primary,
+        backgroundColor: theme.primary,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: colors.primary,
+        shadowColor: theme.primary,
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.3,
         shadowRadius: 20,
@@ -221,7 +223,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 0,
         right: 0,
-        backgroundColor: colors.white,
+        backgroundColor: theme.white,
         borderRadius: 20,
         padding: 8,
         shadowColor: "#000",
@@ -236,7 +238,7 @@ const styles = StyleSheet.create({
     },
     welcomeText: {
         fontSize: 20,
-        color: '#666',
+        color: theme.textSecondary,
         marginBottom: 5,
         fontFamily: 'Outfit-Regular',
         letterSpacing: 1,
@@ -244,12 +246,12 @@ const styles = StyleSheet.create({
     brandName: {
         fontSize: 36,
         fontFamily: 'Outfit-Bold',
-        color: '#1A1A1A',
+        color: theme.text,
         marginBottom: 5,
     },
     tagline: {
         fontSize: 16,
-        color: '#888',
+        color: theme.textSecondary,
         fontFamily: 'Outfit-Medium',
     },
     evolutionContainer: {
@@ -263,7 +265,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         width: '80%',
         height: 4,
-        backgroundColor: '#F0F0F0',
+        backgroundColor: theme.border,
         borderRadius: 2,
         top: '50%',
         marginTop: -2,
@@ -272,21 +274,23 @@ const styles = StyleSheet.create({
         width: 64,
         height: 64,
         borderRadius: 32,
-        backgroundColor: '#fff',
+        backgroundColor: theme.surface,
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: "#000",
+        shadowColor: theme.shadowConfig?.shadowColor || '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
         shadowRadius: 8,
         elevation: 6,
         marginBottom: 8,
+        borderWidth: 1,
+        borderColor: theme.border,
     },
     modeLabel: {
         fontSize: 12,
-        color: '#666',
+        color: theme.textSecondary,
         fontFamily: 'Outfit-Bold',
-        backgroundColor: 'rgba(255,255,255,0.8)',
+        backgroundColor: theme.surfaceHighlight,
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 8,

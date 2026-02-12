@@ -1,240 +1,223 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import ScreenWrapper from '../components/ScreenWrapper';
-import { colors } from '../constants/colors';
 import { useTripContext } from '../context/TripContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import CustomButton from '../components/CustomButton';
+import { useTheme } from '../context/ThemeContext';
 
 const SettleUpScreen = () => {
     const navigation = useNavigation();
     const { currentTrip } = useTripContext();
+    const { theme } = useTheme();
+    const styles = getStyles(theme);
 
     if (!currentTrip) return null;
 
-    // Calculation Logic
-    const members = currentTrip.members || [];
-    const expenses = currentTrip.expenses || [];
-    const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const sharePerPerson = members.length > 0 ? totalSpent / members.length : 0;
+    const calculateBalances = () => {
+        const balances = {};
+        const members = currentTrip.members || [];
+        members.forEach(m => balances[m] = 0);
 
-    const balances = {};
-    members.forEach(m => balances[m] = 0);
+        const expenses = currentTrip.expenses || [];
 
-    expenses.forEach(e => {
-        balances[e.paidBy] += e.amount; // They paid this much
-    });
+        expenses.forEach(expense => {
+            const amount = expense.amount;
+            const paidBy = expense.paidBy;
+            const splitMembers = expense.splitBetween || members;
+            const splitAmount = amount / splitMembers.length;
 
-    members.forEach(m => {
-        balances[m] -= sharePerPerson; // They should have paid this much
-    });
+            if (balances[paidBy] !== undefined) {
+                balances[paidBy] += amount;
+            }
 
-    // Generate Transactions
-    // Greedy algorithm to minimize number of transactions
-    // 1. Separate people into debtors (owes money) and creditors (owed money)
-    const debtors = [];
-    const creditors = [];
-
-    members.forEach(m => {
-        if (balances[m] < -1) debtors.push({ name: m, amount: -balances[m] });
-        else if (balances[m] > 1) creditors.push({ name: m, amount: balances[m] });
-    });
-
-    const transactions = [];
-    let i = 0;
-    let j = 0;
-
-    // 2. Match debtors with creditors until everything is settled
-    while (i < debtors.length && j < creditors.length) {
-        const debt = debtors[i];
-        const credit = creditors[j];
-        const amount = Math.min(debt.amount, credit.amount);
-
-        if (amount > 0) {
-            transactions.push({
-                from: debt.name,
-                to: credit.name,
-                amount: amount
+            splitMembers.forEach(member => {
+                if (balances[member] !== undefined) {
+                    balances[member] -= splitAmount;
+                }
             });
-        }
+        });
 
-        debt.amount -= amount;
-        credit.amount -= amount;
+        return balances;
+    };
 
-        if (debt.amount < 1) i++;
-        if (credit.amount < 1) j++;
-    }
+    const balances = calculateBalances();
+    const sortedMembers = Object.keys(balances).sort((a, b) => balances[b] - balances[a]);
 
     return (
         <ScreenWrapper>
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                    <Ionicons name="arrow-back" size={24} color={colors.text} />
+                    <Ionicons name="arrow-back" size={24} color={theme.text} />
                 </TouchableOpacity>
-                <Text style={styles.title}>Settle Up</Text>
+                <Text style={styles.headerTitle}>Settle Up</Text>
+                <View style={{ width: 40 }} />
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-                {/* Summary Cards */}
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+                {/* Summary Card */}
                 <View style={styles.summaryContainer}>
-                    <View style={styles.summaryBox}>
-                        <Text style={styles.summaryLabel}>Total Expense</Text>
-                        <Text style={styles.summaryValue}>₹{totalSpent.toLocaleString()}</Text>
-                    </View>
+                    <Text style={styles.totalLabel}>Total Trip Cost</Text>
+                    <Text style={styles.totalAmount}>
+                        ₹{currentTrip.expenses.reduce((sum, e) => sum + e.amount, 0).toLocaleString()}
+                    </Text>
                     <View style={styles.divider} />
-                    <View style={styles.summaryBox}>
-                        <Text style={styles.summaryLabel}>Per Person</Text>
-                        <Text style={styles.summaryValue}>₹{Math.round(sharePerPerson).toLocaleString()}</Text>
+                    <View style={styles.avgRow}>
+                        <Text style={styles.avgLabel}>Per Person</Text>
+                        <Text style={styles.avgAmount}>
+                            ₹{(currentTrip.expenses.reduce((sum, e) => sum + e.amount, 0) / (currentTrip.members.length || 1)).toFixed(0)}
+                        </Text>
                     </View>
                 </View>
 
-                {/* Balance List (Who Owes What) */}
+                {/* Balances List */}
                 <Text style={styles.sectionTitle}>Balances</Text>
-                {transactions.length === 0 ? (
-                    <Text style={styles.settledText}>Everyone is settled up!</Text>
-                ) : (
-                    transactions.map((t, index) => (
-                        <View key={index} style={styles.transactionCard}>
-                            <View style={styles.avatarContainer}>
-                                <Text style={styles.avatarText}>{t.from.charAt(0)}</Text>
-                            </View>
-                            <View style={styles.transactionDetails}>
-                                <Text style={styles.transactionText}>
-                                    <Text style={styles.bold}>{t.from}</Text> owes <Text style={styles.bold}>{t.to}</Text>
-                                </Text>
-                            </View>
-                            <Text style={styles.transactionAmount}>₹{Math.round(t.amount).toLocaleString()}</Text>
-                        </View>
-                    ))
-                )}
-
-                {/* Individual Cards */}
-                <Text style={[styles.sectionTitle, { marginTop: 30 }]}>Member Breakdown</Text>
-                {members.map(member => {
-                    const bal = balances[member];
-                    const isOwed = bal > 0;
-                    if (Math.abs(bal) < 1) return null; // Settled
+                {sortedMembers.map((member) => {
+                    const balance = balances[member];
+                    const isOwed = balance >= 0;
 
                     return (
-                        <View key={member} style={styles.memberRow}>
-                            <View style={styles.rowLeft}>
-                                <Ionicons name="person-circle" size={40} color={colors.gray} />
+                        <View key={member} style={styles.balanceCard}>
+                            <View style={styles.memberInfo}>
+                                <View style={styles.avatar}>
+                                    <Text style={styles.avatarText}>{member[0].toUpperCase()}</Text>
+                                </View>
                                 <Text style={styles.memberName}>{member}</Text>
                             </View>
-                            <Text style={[
-                                styles.memberBalance,
-                                { color: isOwed ? colors.success : colors.error }
-                            ]}>
-                                {isOwed ? 'Gets back' : 'Owes'} ₹{Math.abs(Math.round(bal)).toLocaleString()}
-                            </Text>
+                            <View style={styles.balanceInfo}>
+                                <Text style={[styles.balanceLabel, { color: isOwed ? theme.success : theme.error }]}>
+                                    {isOwed ? 'Gets back' : 'Owes'}
+                                </Text>
+                                <Text style={[styles.balanceAmount, { color: isOwed ? theme.success : theme.error }]}>
+                                    ₹{Math.abs(balance).toFixed(2)}
+                                </Text>
+                            </View>
                         </View>
                     );
                 })}
 
-                <CustomButton title="Mark as Settled (Demo)" onPress={() => navigation.goBack()} style={{ marginTop: 40 }} />
+                {/* Simplified Settlements Suggestion (Mock for now or simple logic) */}
+                <Text style={styles.sectionTitle}>Who pays whom?</Text>
+                <View style={styles.transactionCard}>
+                    <Text style={{ color: theme.textSecondary, fontStyle: 'italic', textAlign: 'center' }}>
+                        Settlement optimization coming soon!
+                    </Text>
+                </View>
 
             </ScrollView>
         </ScreenWrapper>
     );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingTop: 10,
         marginBottom: 20,
     },
     backButton: {
-        marginRight: 10,
-    },
-    title: {
-        fontSize: 22,
-        fontWeight: 'bold',
-        color: colors.text
-    },
-    summaryContainer: {
-        flexDirection: 'row',
-        ...colors.glass,
-        padding: 20,
-        marginBottom: 30,
-    },
-    summaryBox: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    divider: {
-        width: 1,
-        backgroundColor: 'rgba(255,255,255,0.3)',
-    },
-    summaryLabel: {
-        color: 'rgba(255,255,255,0.8)',
-        fontSize: 12,
-        marginBottom: 4,
-    },
-    summaryValue: {
-        color: colors.text,
-        fontSize: 20,
-        fontWeight: 'bold',
-    },
-    sectionTitle: {
-        fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 15,
-        color: colors.text,
-    },
-    transactionCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        ...colors.glass,
-        padding: 16,
-        marginBottom: 12,
-    },
-    avatarContainer: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: colors.lightGray,
-        alignItems: 'center',
+        backgroundColor: theme.surface,
         justifyContent: 'center',
-        marginRight: 12,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: theme.border,
     },
-    avatarText: {
-        fontWeight: 'bold',
-        color: colors.primary,
-        fontSize: 18,
+    headerTitle: {
+        fontSize: 24,
+        fontFamily: 'Outfit-Bold',
+        color: theme.text,
     },
-    transactionDetails: {
-        flex: 1,
+    summaryContainer: {
+        backgroundColor: theme.surface,
+        borderRadius: 24,
+        padding: 24,
+        marginBottom: 30,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderColor: theme.border,
     },
-    transactionText: {
+    totalLabel: {
+        fontSize: 14,
+        color: theme.textSecondary,
+        fontFamily: 'Outfit-Bold',
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    totalAmount: {
+        fontSize: 36,
+        fontFamily: 'Outfit-Bold',
+        color: theme.text,
+        marginVertical: 10,
+    },
+    divider: {
+        height: 1,
+        width: '100%',
+        backgroundColor: theme.border,
+        marginVertical: 15,
+    },
+    avgRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+    },
+    avgLabel: {
         fontSize: 16,
-        color: colors.text,
+        color: theme.textSecondary,
+        fontFamily: 'Outfit-Medium',
     },
-    bold: {
-        fontWeight: 'bold',
-    },
-    transactionAmount: {
+    avgAmount: {
         fontSize: 16,
-        fontWeight: 'bold',
-        color: colors.error,
+        color: theme.text,
+        fontFamily: 'Outfit-Bold',
     },
-    memberRow: {
+    sectionTitle: {
+        fontSize: 20,
+        fontFamily: 'Outfit-Bold',
+        color: theme.text,
+        marginHorizontal: 20,
+        marginBottom: 15,
+    },
+    balanceCard: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.lightGray,
+        backgroundColor: theme.surfaceHighlight,
+        marginHorizontal: 20,
+        marginBottom: 12,
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: theme.border,
     },
-    rowLeft: {
+    memberInfo: {
         flexDirection: 'row',
         alignItems: 'center',
     },
+    avatar: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: theme.primary + '20', // 20% opacity 
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 12,
+        borderWidth: 1,
+        borderColor: theme.primary,
+    },
+    avatarText: {
+        fontSize: 16,
+        fontFamily: 'Outfit-Bold',
+        color: theme.primary,
+    },
     memberName: {
         fontSize: 16,
-        marginLeft: 10,
-        color: colors.text,
     },
     memberBalance: {
         fontWeight: 'bold',

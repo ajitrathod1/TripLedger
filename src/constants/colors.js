@@ -1,39 +1,41 @@
 export const colors = {
-  primary: '#7F5AF0', // Vivid Purple
-  secondary: '#2Cb67D',
-  background: '#16161a', // Very Dark
-  surface: '#242629',    // Dark Gray Card
-  text: '#fffffe',       // White
-  textSecondary: '#94a1b2', // Grayish Blue
-  border: '#010101',
-  success: '#2Cb67D',
-  error: '#ef4565',
-  warning: '#ff8906',
-  info: '#3da9fc',
-  white: '#fffffe',
-  gray: '#94a1b2',
-  darkGray: '#242629',
-  lightGray: '#16161a',
-  gradientStart: '#16161a', // Using solid like gradient for consistency
-  gradientEnd: '#242629',
-  // Reverting "glass" to be a Solid Card style for better readability
+  primary: '#0D9C96', // Teal/Cyan (Main Brand Color)
+  secondary: '#FF7029', // Coral Orange for accents/buttons
+  background: '#F7F7F9', // Very light gray/white background
+  surface: '#FFFFFF',    // Pure White Cards
+  text: '#1B1E28',       // Dark Blue-Black for headings
+  textSecondary: '#7D848D', // Gray for subtitles
+  border: '#E7ECF3',     // Subtle border
+  success: '#32D74B',    // Green
+  error: '#FF453A',      // Red
+  warning: '#FFCC00',
+  info: '#5856D6',
+  white: '#FFFFFF',
+  gray: '#7D848D',
+  darkGray: '#1B1E28',
+  lightGray: '#F7F7F9',
+
+  // Light Gradient for background (Subtle fade)
+  gradientStart: '#D6F4F1', // Light Teal/Green top
+  gradientEnd: '#FFFFFF',
+
+  // Modern Clean Card Style (Not Glass anymore)
   glass: {
-    backgroundColor: '#242629', // Solid Card Color
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: '#9CA3AF',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     elevation: 5,
+    borderWidth: 0, // No border for cleaner look
   },
+
   shadowConfig: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowColor: '#0D9C96',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2, // Softer shadow
+    shadowRadius: 15,
+    elevation: 8,
   }
 };

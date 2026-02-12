@@ -1,29 +1,59 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator, Alert, Animated, ImageBackground } from 'react-native';
 import ScreenWrapper from '../components/ScreenWrapper';
 import CustomButton from '../components/CustomButton';
+import SkeletonLoader from '../components/SkeletonLoader';
 import { colors } from '../constants/colors';
 import { useTripContext } from '../context/TripContext';
 import { PieChart } from 'react-native-chart-kit';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const screenWidth = Dimensions.get('window').width;
 
 const getCategoryColor = (category) => {
     switch (category) {
-        case 'Travel': return '#4FC3F7';
-        case 'Food': return '#81C784';
-        case 'Stay': return '#FFB74D';
-        case 'Activities': return '#BA68C8';
-        case 'Shopping': return '#E57373';
-        default: return '#AED581';
+        case 'Food': return '#4CAF50';
+        case 'Travel': return '#2196F3';
+        case 'Stay': return '#FF9800';
+        case 'Activities': return '#9C27B0';
+        case 'Shopping': return '#E91E63';
+        default: return '#607D8B';
     }
+};
+
+const categoryIcons = {
+    'Food': 'restaurant',
+    'Travel': 'car',
+    'Stay': 'bed',
+    'Activities': 'ticket',
+    'Shopping': 'cart',
+    'Other': 'receipt',
 };
 
 const TripSummaryScreen = () => {
     const { currentTrip, loading, deleteTrip, deleteExpense } = useTripContext();
     const navigation = useNavigation();
+
+    // Animation Values
+    const fadeAnim = useRef(new Animated.Value(0)).current;
+    const slideAnim = useRef(new Animated.Value(30)).current;
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 600,
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 600,
+                useNativeDriver: true,
+            }),
+        ]).start();
+    }, []);
 
     const handleDeleteTrip = () => {
         Alert.alert(
@@ -34,7 +64,6 @@ const TripSummaryScreen = () => {
                 {
                     text: "Delete", style: "destructive", onPress: () => {
                         deleteTrip(currentTrip.id);
-                        // Navigation or state update will happen automatically due to context logic
                     }
                 }
             ]
@@ -52,27 +81,29 @@ const TripSummaryScreen = () => {
         );
     };
 
+    const getTripImage = (id) => {
+        const seed = id || 'travel';
+        return `https://picsum.photos/seed/${seed}/800/600`;
+    };
+
     if (loading) {
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                <ActivityIndicator size="large" color={colors.primary} />
-            </View>
+            <ScreenWrapper>
+                <View style={{ padding: 20 }}>
+                    <SkeletonLoader height={200} style={{ borderRadius: 20, marginBottom: 20 }} />
+                    <SkeletonLoader height={150} style={{ borderRadius: 20, marginBottom: 20 }} />
+                    <SkeletonLoader height={100} style={{ borderRadius: 20, marginBottom: 10 }} />
+                    <SkeletonLoader height={100} style={{ borderRadius: 20, marginBottom: 10 }} />
+                </View>
+            </ScreenWrapper>
         );
     }
 
     if (!currentTrip) {
         return (
             <ScreenWrapper>
-                <View style={[styles.header, { justifyContent: 'center' }]}>
-                    <Text style={styles.headerTitle}>TripLedger</Text>
-                </View>
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-                    <Ionicons name="airplane-outline" size={80} color={colors.primary} style={{ marginBottom: 20 }} />
-                    <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text, marginBottom: 10 }}>No Trips Yet</Text>
-                    <Text style={{ fontSize: 16, color: colors.textSecondary, textAlign: 'center', marginBottom: 30 }}>
-                        Start by creating your first trip to track expenses.
-                    </Text>
-                    <CustomButton title="Create New Trip" onPress={() => navigation.navigate('CreateTrip')} />
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <ActivityIndicator size="large" color={colors.primary} />
                 </View>
             </ScreenWrapper>
         );
@@ -83,9 +114,8 @@ const TripSummaryScreen = () => {
     const remaining = currentTrip.totalBudget - totalSpent;
     const progress = Math.min(totalSpent / (currentTrip.totalBudget || 1), 1);
 
-    // Prepare Chart Data
-    // Aggregates expenses by category for visualization
-    const categories = ['Travel', 'Food', 'Stay', 'Activities', 'Shopping', 'Other'];
+    // Chart Data logic...
+    const categories = ['Food', 'Travel', 'Stay', 'Activities', 'Shopping', 'Other'];
     const chartData = categories.map(cat => {
         const amount = expenses.filter(e => e.category === cat).reduce((sum, e) => sum + e.amount, 0);
         if (amount === 0) return null;
@@ -93,141 +123,238 @@ const TripSummaryScreen = () => {
             name: cat,
             population: amount,
             color: getCategoryColor(cat),
-            legendFontColor: colors.textSecondary,
-            legendFontSize: 12
+            legendFontColor: 'transparent',
+            legendFontSize: 0
         };
     }).filter(item => item !== null);
 
     return (
-        <ScreenWrapper style={{ paddingHorizontal: 0 }}>
-            {/* Custom Header with Settle Up and Delete button */}
-            <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.navigate('CreateTrip')} style={{ marginRight: 10 }}>
-                    <Ionicons name="add-circle-outline" size={32} color={colors.text} />
-                </TouchableOpacity>
-                <View style={{ flex: 1 }}>
-                    <Text style={styles.headerTitle}>{currentTrip.name}</Text>
-                    <Text style={styles.headerSubtitle}>{currentTrip.destination}</Text>
-                </View>
-                <View style={{ flexDirection: 'row' }}>
-                    <TouchableOpacity onPress={() => navigation.navigate('SettleUp')} style={{ marginRight: 15 }}>
-                        <Ionicons name="people-circle-outline" size={32} color={colors.text} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={handleDeleteTrip}>
-                        <Ionicons name="trash-outline" size={32} color={colors.error} />
-                    </TouchableOpacity>
-                </View>
-            </View>
+        <ScreenWrapper contentContainerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
 
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <ScrollView
+                style={{ flex: 1 }}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: 100 }}
+            >
+                {/* Header Image */}
+                <ImageBackground
+                    source={{ uri: getTripImage(currentTrip.id) }}
+                    style={styles.headerImage}
+                >
+                    <LinearGradient
+                        colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(255,255,255,1)']}
+                        style={styles.headerGradient}
+                    />
 
-                {/* Budget Overview */}
-                <View style={styles.card}>
-                    <View style={styles.budgetRow}>
-                        <View>
-                            <Text style={styles.label}>Total Spent</Text>
-                            <Text style={styles.spentAmount}>₹{totalSpent.toLocaleString()}</Text>
+                    {/* Header Controls */}
+                    <View style={styles.headerControls}>
+                        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.glassBtn}>
+                            <Ionicons name="arrow-back" size={24} color="#fff" />
+                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', gap: 10 }}>
+                            <TouchableOpacity onPress={() => navigation.navigate('SettleUp')} style={styles.glassBtn}>
+                                <Ionicons name="filter-outline" size={22} color="#fff" />
+                            </TouchableOpacity>
+                            <TouchableOpacity onPress={handleDeleteTrip} style={[styles.glassBtn, { backgroundColor: 'rgba(229, 57, 53, 0.8)' }]}>
+                                <Ionicons name="trash-outline" size={22} color="#fff" />
+                            </TouchableOpacity>
                         </View>
-                        <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={styles.label}>Remaining</Text>
-                            <Text style={[styles.remainingAmount, { color: remaining < 0 ? colors.error : colors.success }]}>
-                                ₹{remaining.toLocaleString()}
+                    </View>
+
+                    <View style={styles.headerTitleContainer}>
+                        <Text style={styles.tripNameLarge}>{currentTrip.name}</Text>
+                        <View style={styles.locationTag}>
+                            <Ionicons name="location" size={14} color="#fff" />
+                            <Text style={styles.locationText}>{currentTrip.destination}</Text>
+                        </View>
+                    </View>
+                </ImageBackground>
+
+                {/* Content Body */}
+                <View style={styles.contentBody}>
+                    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+
+                        {/* Budget Analysis Card */}
+                        <View style={styles.budgetCard}>
+                            {/* Top Row: Budget vs Spent vs Remaining */}
+                            <View style={styles.budgetRow}>
+                                <View>
+                                    <Text style={styles.label}>Total Budget</Text>
+                                    <Text style={styles.valuePrimary}>₹{currentTrip.totalBudget.toLocaleString()}</Text>
+                                </View>
+                                <View style={{ alignItems: 'flex-end' }}>
+                                    <Text style={styles.label}>Remaining</Text>
+                                    <Text style={[styles.valueRight, { color: remaining < 0 ? '#E53935' : '#2A9D8F' }]}>
+                                        ₹{remaining.toLocaleString()}
+                                    </Text>
+                                </View>
+                            </View>
+
+                            {/* Progress Bar */}
+                            <View style={styles.progressBarContainer}>
+                                <View style={[styles.progressBarFill, { width: `${progress * 100}%`, backgroundColor: remaining < 0 ? '#E53935' : '#2A9D8F' }]} />
+                            </View>
+                            <Text style={styles.progressText}>
+                                You've spent <Text style={{ fontFamily: 'Outfit-Bold' }}>{Math.round(progress * 100)}%</Text> of your budget
                             </Text>
                         </View>
-                    </View>
-                    <View style={styles.progressBarBackground}>
-                        <View style={[styles.progressBarFill, { width: `${progress * 100}%`, backgroundColor: remaining < 0 ? colors.error : colors.primary }]} />
-                    </View>
-                    <Text style={styles.budgetLimit}>Total Budget: ₹{currentTrip.totalBudget.toLocaleString()}</Text>
+
+                        {/* Expense Visuals (Donut) */}
+                        <View style={styles.chartSection}>
+                            <View style={styles.pieWrapper}>
+                                <PieChart
+                                    data={chartData.length > 0 ? chartData : [{ population: 1, color: '#F0F0F0' }]}
+                                    width={screenWidth * 0.5}
+                                    height={160}
+                                    chartConfig={{ color: () => `rgba(0,0,0,0.5)` }}
+                                    accessor="population"
+                                    backgroundColor="transparent"
+                                    paddingLeft="40"
+                                    center={[0, 0]}
+                                    absolute
+                                    hasLegend={false}
+                                />
+                                <View style={styles.donutCenter}>
+                                    <Text style={styles.totalLabel}>Spent</Text>
+                                    <Text style={styles.totalValue}>₹{totalSpent.toLocaleString()}</Text>
+                                </View>
+                            </View>
+
+                            {/* Custom Legend */}
+                            <View style={styles.legendContainer}>
+                                {chartData.map((item, index) => (
+                                    <View key={index} style={styles.legendItem}>
+                                        <View style={[styles.legendDot, { backgroundColor: item.color }]} />
+                                        <View>
+                                            <Text style={styles.legendName}>{item.name}</Text>
+                                            <Text style={styles.legendAmount}>₹{item.population.toLocaleString()}</Text>
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+                        </View>
+
+                        {/* Recent Transactions Header */}
+                        <View style={styles.sectionHeader}>
+                            <Text style={styles.sectionTitle}>Recent Transactions</Text>
+                            <TouchableOpacity><Text style={styles.viewAll}>View All</Text></TouchableOpacity>
+                        </View>
+
+                        {/* Expense List */}
+                        {expenses.length === 0 ? (
+                            <View style={styles.emptyState}>
+                                <Ionicons name="receipt-outline" size={48} color="#ddd" />
+                                <Text style={styles.emptyText}>No expenses added yet.</Text>
+                            </View>
+                        ) : (
+                            expenses.map((expense, index) => (
+                                <TouchableOpacity key={expense.id} style={styles.expenseCard} onLongPress={() => handleDeleteExpense(expense.id)}>
+                                    <View style={[styles.iconContainer, { backgroundColor: getCategoryColor(expense.category) + '15' }]}>
+                                        <Ionicons name={categoryIcons[expense.category]} size={20} color={getCategoryColor(expense.category)} />
+                                    </View>
+                                    <View style={styles.expenseInfo}>
+                                        <Text style={styles.expenseTitle}>{expense.title}</Text>
+                                        <Text style={styles.expenseCategory}>{expense.category} • {expense.paidBy}</Text>
+                                    </View>
+                                    <Text style={styles.expenseAmount}>- ₹{expense.amount.toLocaleString()}</Text>
+                                </TouchableOpacity>
+                            ))
+                        )}
+
+                    </Animated.View>
                 </View>
-
-                {/* Chart */}
-                {chartData.length > 0 ? (
-                    <View style={styles.chartContainer}>
-                        <PieChart
-                            data={chartData}
-                            width={screenWidth - 40}
-                            height={220}
-                            chartConfig={{
-                                color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
-                            }}
-                            accessor={"population"}
-                            backgroundColor={"transparent"}
-                            paddingLeft={"15"}
-                            center={[10, 0]}
-                            absolute
-                        />
-                    </View>
-                ) : (
-                    <View style={styles.emptyState}>
-                        <Text>No expenses yet.</Text>
-                    </View>
-                )}
-
-                {/* Recent Expenses List */}
-                <Text style={styles.sectionTitle}>Recent Expenses</Text>
-                {currentTrip.expenses.length === 0 ? (
-                    <Text style={{ color: colors.gray, fontStyle: 'italic' }}>No expenses recorded. Click + to add one.</Text>
-                ) : (
-                    currentTrip.expenses.map((expense) => (
-                        <TouchableOpacity
-                            key={expense.id}
-                            style={styles.expenseItem}
-                            onLongPress={() => handleDeleteExpense(expense.id)}
-                            activeOpacity={0.7}
-                        >
-                            <View style={[styles.iconBox, { backgroundColor: getCategoryColor(expense.category) + '33' }]}>
-                                <Ionicons name={"pricetag"} size={20} color={getCategoryColor(expense.category)} />
-                            </View>
-                            <View style={styles.expenseDetails}>
-                                <Text style={styles.expenseTitle}>{expense.title}</Text>
-                                <Text style={styles.expenseSub}>{expense.paidBy} • {expense.category}</Text>
-                            </View>
-                            <Text style={styles.expenseAmount}>₹{expense.amount.toLocaleString()}</Text>
-                        </TouchableOpacity>
-                    ))
-                )}
-
             </ScrollView>
 
-            {/* FAB to Add Expense */}
-            <TouchableOpacity
-                style={styles.fab}
-                onPress={() => navigation.navigate('AddExpense')}
-            >
-                <Ionicons name="add" size={30} color={colors.white} />
-                <Text style={styles.fabText}>Add Expense</Text>
-            </TouchableOpacity>
+            {/* Floating Action Button */}
+            <View style={styles.fabContainer}>
+                <TouchableOpacity
+                    style={styles.fabButton}
+                    onPress={() => navigation.navigate('AddExpense')}
+                    activeOpacity={0.8}
+                >
+                    <Ionicons name="add" size={32} color="#fff" />
+                </TouchableOpacity>
+            </View>
 
         </ScreenWrapper>
     );
 };
 
 const styles = StyleSheet.create({
-    header: {
+    headerImage: {
+        width: '100%',
+        height: 280,
+    },
+    headerGradient: {
+        ...StyleSheet.absoluteFillObject,
+    },
+    headerControls: {
         flexDirection: 'row',
         justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingTop: 50,
+    },
+    glassBtn: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(0,0,0,0.3)',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 15,
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
     },
-    headerTitle: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: colors.text,
+    headerTitleContainer: {
+        position: 'absolute',
+        bottom: 40,
+        left: 20,
     },
-    headerSubtitle: {
+    tripNameLarge: {
+        fontSize: 32,
+        fontFamily: 'Outfit-Bold',
+        color: '#fff',
+        textShadowColor: 'rgba(0,0,0,0.3)',
+        textShadowOffset: { width: 0, height: 2 },
+        textShadowRadius: 4,
+        marginBottom: 8,
+    },
+    locationTag: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        alignSelf: 'flex-start',
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+    },
+    locationText: {
+        color: '#fff',
+        marginLeft: 6,
+        fontFamily: 'Outfit-Medium',
         fontSize: 14,
-        color: colors.textSecondary,
     },
-    scrollContent: {
+    contentBody: {
+        marginTop: -30,
+        borderTopLeftRadius: 30,
+        borderTopRightRadius: 30,
+        backgroundColor: '#fff',
         paddingHorizontal: 20,
+        paddingTop: 30,
         paddingBottom: 100,
+        minHeight: 500,
     },
-    card: {
-        ...colors.glass,
+    budgetCard: {
+        backgroundColor: '#fff',
+        borderRadius: 24,
         padding: 20,
-        marginTop: 20,
+        marginBottom: 20,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.05,
+        shadowRadius: 15,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: '#F0F0F0',
     },
     budgetRow: {
         flexDirection: 'row',
@@ -236,94 +363,190 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 12,
-        color: colors.textSecondary,
+        color: '#909090',
+        fontFamily: 'Outfit-Regular',
         marginBottom: 4,
     },
-    spentAmount: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        color: colors.text,
+    valuePrimary: {
+        fontSize: 22,
+        fontFamily: 'Outfit-Bold',
+        color: '#264653',
     },
-    remainingAmount: {
-        fontSize: 20,
-        fontWeight: 'bold',
+    valueRight: {
+        fontSize: 22,
+        fontFamily: 'Outfit-Bold',
     },
-    progressBarBackground: {
+    progressBarContainer: {
         height: 8,
-        backgroundColor: colors.lightGray,
+        backgroundColor: '#F1F3F5',
         borderRadius: 4,
+        marginBottom: 10,
         overflow: 'hidden',
-        marginBottom: 8,
     },
     progressBarFill: {
         height: '100%',
         borderRadius: 4,
     },
-    budgetLimit: {
+    progressText: {
         fontSize: 12,
-        color: colors.gray,
+        color: '#909090',
         textAlign: 'right',
+        fontFamily: 'Outfit-Regular',
     },
-    chartContainer: {
+    chartSection: {
+        flexDirection: 'row',
+        backgroundColor: '#fff',
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 25,
         alignItems: 'center',
-        marginTop: 10,
-        marginBottom: 20,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.05,
+        shadowRadius: 15,
+        elevation: 2,
+        borderWidth: 1,
+        borderColor: '#F0F0F0',
+    },
+    pieWrapper: {
+        position: 'relative',
+        justifyContent: 'center',
+        alignItems: 'center',
+        width: screenWidth * 0.4,
+    },
+    donutCenter: {
+        position: 'absolute',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    totalLabel: {
+        fontSize: 10,
+        color: '#909090',
+        fontFamily: 'Outfit-Regular',
+    },
+    totalValue: {
+        fontSize: 14,
+        fontFamily: 'Outfit-Bold',
+        color: '#333',
+    },
+    legendContainer: {
+        marginLeft: 15,
+        flex: 1,
+    },
+    legendItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 12,
+    },
+    legendDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        marginRight: 10,
+        marginTop: 2,
+    },
+    legendName: {
+        fontSize: 12,
+        color: '#909090',
+        fontFamily: 'Outfit-Regular',
+    },
+    legendAmount: {
+        fontSize: 14,
+        fontFamily: 'Outfit-Bold',
+        color: '#333',
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 15,
     },
     sectionTitle: {
         fontSize: 18,
-        fontWeight: 'bold',
-        marginBottom: 15,
-        color: colors.text,
+        fontFamily: 'Outfit-Bold',
+        color: '#333',
     },
-    expenseItem: {
+    viewAll: {
+        fontSize: 14,
+        color: '#2A9D8F',
+        fontFamily: 'Outfit-Medium',
+    },
+    expenseCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        ...colors.glass,
-        padding: 15,
-        marginBottom: 12,
-    },
-    iconBox: {
-        width: 40,
-        height: 40,
+        backgroundColor: '#fff',
+        padding: 16,
         borderRadius: 20,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginRight: 15,
+        marginBottom: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.03,
+        shadowRadius: 8,
+        elevation: 1,
+        borderWidth: 1,
+        borderColor: '#F9F9F9',
     },
-    expenseDetails: {
+    iconContainer: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    expenseInfo: {
         flex: 1,
     },
     expenseTitle: {
         fontSize: 16,
-        fontWeight: '600',
-        color: colors.text,
+        fontFamily: 'Outfit-Bold',
+        color: '#333',
+        marginBottom: 4,
     },
-    expenseSub: {
+    expenseCategory: {
         fontSize: 12,
-        color: colors.textSecondary,
+        color: '#909090',
+        fontFamily: 'Outfit-Regular',
     },
     expenseAmount: {
         fontSize: 16,
-        fontWeight: 'bold',
-        color: colors.text,
+        fontFamily: 'Outfit-Bold',
+        color: '#E53935',
     },
-    fab: {
+    emptyState: {
+        alignItems: 'center',
+        padding: 30,
+        opacity: 0.6,
+    },
+    emptyText: {
+        marginTop: 10,
+        fontFamily: 'Outfit-Regular',
+        fontSize: 14,
+        color: '#909090',
+    },
+    fabContainer: {
         position: 'absolute',
         bottom: 30,
-        alignSelf: 'center',
-        backgroundColor: colors.primary,
-        flexDirection: 'row',
+        left: 0,
+        right: 0,
         alignItems: 'center',
-        paddingVertical: 12,
-        paddingHorizontal: 24,
-        borderRadius: 30,
-        ...colors.shadowConfig,
+        justifyContent: 'center',
+        zIndex: 100,
     },
-    fabText: {
-        color: colors.white,
-        fontWeight: 'bold',
-        marginLeft: 8,
-        fontSize: 16,
+    fabButton: {
+        width: 64,
+        height: 64,
+        borderRadius: 32,
+        backgroundColor: '#264653',
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: "#264653",
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.3,
+        shadowRadius: 12,
+        elevation: 8,
+        borderWidth: 4,
+        borderColor: 'rgba(255,255,255,0.2)',
     }
 });
 

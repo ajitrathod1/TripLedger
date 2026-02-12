@@ -3,17 +3,20 @@ import { View, StyleSheet, StatusBar, SafeAreaView, Platform } from 'react-nativ
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../constants/colors';
 
-const ScreenWrapper = ({ children, style }) => {
+const ScreenWrapper = ({ children, style, contentContainerStyle }) => {
     return (
         <LinearGradient
             colors={[colors.gradientStart, colors.gradientEnd]}
             style={styles.container}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
+            end={{ x: 0, y: 1 }} // Vertical subtle gradient
         >
-            <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+            <StatusBar barStyle="dark-content" translucent backgroundColor="transparent" />
+
+            {/* Optional light pattern could go here, but keeping it clean for now */}
+
             <SafeAreaView style={[styles.safeArea, style]}>
-                <View style={styles.content}>
+                <View style={[styles.content, contentContainerStyle]}>
                     {children}
                 </View>
             </SafeAreaView>
@@ -27,13 +30,13 @@ const styles = StyleSheet.create({
     },
     safeArea: {
         flex: 1,
-        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 0,
+        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     },
     content: {
         flex: 1,
         paddingHorizontal: 20,
         paddingBottom: 20,
-    }
+    },
 });
 
 export default ScreenWrapper;

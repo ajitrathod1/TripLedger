@@ -18,14 +18,21 @@ export const TripProvider = ({ children }) => {
             const storedTrips = await AsyncStorage.getItem('trips');
             if (storedTrips) {
                 const parsedTrips = JSON.parse(storedTrips);
-                setTrips(parsedTrips);
-                // Automatically select the last active trip or the newest one
-                if (parsedTrips.length > 0) {
-                    setCurrentTrip(parsedTrips[parsedTrips.length - 1]);
+                // Sanitize data: Ensure expenses and members arrays exist
+                const sanitizedTrips = parsedTrips.map(trip => ({
+                    ...trip,
+                    members: trip.members || [],
+                    expenses: trip.expenses || []
+                }));
+
+                setTrips(sanitizedTrips);
+                if (sanitizedTrips.length > 0) {
+                    setCurrentTrip(sanitizedTrips[sanitizedTrips.length - 1]);
                 }
             }
         } catch (e) {
             console.error("Failed to load trips", e);
+            AsyncStorage.removeItem('trips'); // Optional: Clear corrupt data if needed
         } finally {
             setLoading(false);
         }
@@ -41,10 +48,9 @@ export const TripProvider = ({ children }) => {
 
     const addTrip = (tripData) => {
         const newTrip = {
-            ...tripData,
+            members: [], // Default to empty if not provided
+            ...tripData, // This will override members if tripData has it
             id: Date.now().toString(),
-            // For now, defaulting members. In future, we can add a screen to select members.
-            members: ['You', 'Rahul', 'Neha', 'Amit'],
             expenses: []
         };
         const updatedTrips = [...trips, newTrip];

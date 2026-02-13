@@ -14,35 +14,16 @@ export const ThemeProvider = ({ children }) => {
     }, []);
 
     const loadTheme = async () => {
-        try {
-            const savedTheme = await AsyncStorage.getItem('themeType');
-            if (savedTheme) {
-                setThemeType(savedTheme);
-                setTheme(themes[savedTheme]);
-            }
-        } catch (error) {
-            console.log('Error loading theme:', error);
-        }
+        // Always use dark theme
+        setThemeType('dark');
+        setTheme(themes.dark);
     };
 
-    const toggleTheme = async () => {
-        const newType = themeType === 'dark' ? 'light' : 'dark';
-        setThemeType(newType);
-        setTheme(themes[newType]);
-        try {
-            await AsyncStorage.setItem('themeType', newType);
-        } catch (error) {
-            console.log('Error saving theme:', error);
-        }
-    };
+    // Removed toggleTheme - app is now permanently dark mode
 
     return (
-        <ThemeContext.Provider value={{ theme, themeType, toggleTheme }}>
-            <StatusBar
-                barStyle={theme.statusBar}
-                backgroundColor="transparent"
-                translucent
-            />
+        <ThemeContext.Provider value={{ theme, themeType, toggleTheme: () => { }, isDark: true }}>
+            {/* StatusBar is handled in ScreenWrapper to prevent duplication */}
             {children}
         </ThemeContext.Provider>
     );

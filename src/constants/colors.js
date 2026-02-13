@@ -1,18 +1,18 @@
 export const themes = {
   dark: {
     type: 'dark',
-    primary: '#00C896',    // Cyan/Teal
-    secondary: '#FF7D54',  // Coral Orange
-    background: '#0F172A', // Deep Navy
-    surface: 'rgba(255, 255, 255, 0.1)', // Glass
-    surfaceHighlight: 'rgba(255, 255, 255, 0.2)',
+    primary: '#00C896',    // Reverted to Teal
+    secondary: '#FF7D54',  // Reverted to Coral Orange
+    background: '#0F172A', // Reverted to Deep Navy
+    surface: 'rgba(255, 255, 255, 0.05)', // Keep Ultra-Fine Glass from new theme
+    surfaceHighlight: 'rgba(255, 255, 255, 0.12)',
     text: '#FFFFFF',
     textSecondary: '#94A3B8',
-    border: 'rgba(255, 255, 255, 0.1)',
-    success: '#34D399',
-    error: '#F87171',
-    warning: '#FBBF24',
-    info: '#60A5FA',
+    border: 'rgba(255, 255, 255, 0.15)', // Keep Crisp Border
+    success: '#34D399',    // Reverted
+    error: '#F87171',      // Reverted
+    warning: '#FBBF24',    // Reverted
+    info: '#60A5FA',       // Reverted
     white: '#FFFFFF',
     gray: '#94A3B8',
     iconDefault: '#FFFFFF',
@@ -25,19 +25,19 @@ export const themes = {
     statusBar: 'light-content',
     statusBarStyle: 'light',
 
-    // Legacy glass helper (optional, but better to use surface)
+    // Legacy glass helper
     glass: {
-      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-      borderColor: 'rgba(255, 255, 255, 0.1)',
+      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      borderColor: 'rgba(255, 255, 255, 0.15)',
       borderWidth: 1,
     },
 
     shadowConfig: {
       shadowColor: '#00C896',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.2, // Softer shadow
-      shadowRadius: 15,
-      elevation: 8,
+      shadowOffset: { width: 0, height: 10 },
+      shadowOpacity: 0.3,
+      shadowRadius: 20,
+      elevation: 10,
     }
   },
   light: {

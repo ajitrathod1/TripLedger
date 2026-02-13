@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "TripLedger",
-    "slug": "tripledger-app",
+    "name": "TripKaHisab",
+    "slug": "tripkahisab",
     "version": "1.0.0",
     "description": "Expense Manager for Group Trips",
-    "scheme": "tripledger",
+    "scheme": "tripkahisab",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

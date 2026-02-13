@@ -5,6 +5,9 @@ import CreateTripScreen from '../screens/CreateTripScreen';
 import AddExpenseScreen from '../screens/AddExpenseScreen';
 import TripSummaryScreen from '../screens/TripSummaryScreen';
 import SettleUpScreen from '../screens/SettleUpScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import LoginScreen from '../screens/LoginScreen';
+import SignupScreen from '../screens/SignupScreen';
 import HomeScreen from '../screens/HomeScreen';
 import TripListScreen from '../screens/TripListScreen';
 
@@ -15,7 +18,10 @@ const AppNavigator = () => {
         <NavigationContainer>
             <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Home">
                 <Stack.Screen name="Home" component={HomeScreen} />
+                <Stack.Screen name="Login" component={LoginScreen} />
+                <Stack.Screen name="Signup" component={SignupScreen} />
                 <Stack.Screen name="TripList" component={TripListScreen} />
+                <Stack.Screen name="Profile" component={ProfileScreen} />
                 <Stack.Screen name="CreateTrip" component={CreateTripScreen} />
                 <Stack.Screen name="TripSummary" component={TripSummaryScreen} />
                 <Stack.Screen name="AddExpense" component={AddExpenseScreen} />

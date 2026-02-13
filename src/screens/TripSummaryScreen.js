@@ -1,13 +1,16 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator, Alert, Animated, ImageBackground } from 'react-native';
-import ScreenWrapper from '../components/ScreenWrapper';
+// Removed unused imports
 import SkeletonLoader from '../components/SkeletonLoader';
 import { useTripContext } from '../context/TripContext';
 import { PieChart } from 'react-native-chart-kit';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
+import ThemedBackground from '../components/ThemedBackground';
 import { useTheme } from '../context/ThemeContext';
+
 
 const screenWidth = Dimensions.get('window').width;
 
@@ -41,6 +44,9 @@ const TripSummaryScreen = () => {
     const fadeAnim = useRef(new Animated.Value(0)).current;
     const slideAnim = useRef(new Animated.Value(30)).current;
     const scrollY = useRef(new Animated.Value(0)).current;
+
+    // Toggle for View All
+    const [showAllExpenses, setShowAllExpenses] = useState(false);
 
     useEffect(() => {
         Animated.parallel([
@@ -131,7 +137,7 @@ const TripSummaryScreen = () => {
     }).filter(item => item !== null);
 
     return (
-        <ScreenWrapper contentContainerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}>
+        <ThemedBackground>
 
             <Animated.ScrollView
                 style={{ flex: 1 }}
@@ -153,21 +159,21 @@ const TripSummaryScreen = () => {
                         style={styles.headerGradient}
                     />
                     <LinearGradient
-                        colors={['transparent', theme.background]}
+                        colors={['transparent', '#0F172A']}
                         style={[styles.headerGradient, { top: undefined, height: 100, bottom: -2 }]}
                     />
 
                     {/* Header Controls */}
                     <View style={styles.headerControls}>
                         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.glassBtn}>
-                            <Ionicons name="arrow-back" size={24} color={theme.text} />
+                            <Ionicons name="arrow-back" size={24} color="#fff" />
                         </TouchableOpacity>
                         <View style={{ flexDirection: 'row', gap: 10 }}>
                             <TouchableOpacity onPress={() => navigation.navigate('SettleUp')} style={styles.glassBtn}>
-                                <Ionicons name="filter-outline" size={22} color={theme.text} />
+                                <Ionicons name="filter-outline" size={22} color="#fff" />
                             </TouchableOpacity>
-                            <TouchableOpacity onPress={handleDeleteTrip} style={[styles.glassBtn, { backgroundColor: 'rgba(229, 57, 53, 0.8)' }]}>
-                                <Ionicons name="trash-outline" size={22} color={theme.text} />
+                            <TouchableOpacity onPress={handleDeleteTrip} style={[styles.glassBtn, { backgroundColor: 'rgba(239, 68, 68, 0.8)' }]}>
+                                <Ionicons name="trash-outline" size={22} color="#fff" />
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -175,7 +181,7 @@ const TripSummaryScreen = () => {
                     <View style={styles.headerTitleContainer}>
                         <Text style={styles.tripNameLarge}>{currentTrip.name}</Text>
                         <View style={styles.locationTag}>
-                            <Ionicons name="location" size={14} color={theme.text} />
+                            <Ionicons name="location" size={14} color="#fff" />
                             <Text style={styles.locationText}>{currentTrip.destination}</Text>
                         </View>
                     </View>
@@ -186,7 +192,7 @@ const TripSummaryScreen = () => {
                     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
 
                         {/* Budget Analysis Card */}
-                        <View style={styles.budgetCard}>
+                        <View style={styles.glassCard}>
                             {/* Top Row: Budget vs Spent vs Remaining */}
                             <View style={styles.budgetRow}>
                                 <View>
@@ -195,7 +201,7 @@ const TripSummaryScreen = () => {
                                 </View>
                                 <View style={{ alignItems: 'flex-end' }}>
                                     <Text style={styles.label}>Remaining</Text>
-                                    <Text style={[styles.valueRight, { color: remaining < 0 ? theme.error : theme.success }]}>
+                                    <Text style={[styles.valueRight, { color: remaining < 0 ? '#EF4444' : '#10B981' }]}>
                                         ₹{remaining.toLocaleString()}
                                     </Text>
                                 </View>
@@ -203,21 +209,21 @@ const TripSummaryScreen = () => {
 
                             {/* Progress Bar */}
                             <View style={styles.progressBarContainer}>
-                                <View style={[styles.progressBarFill, { width: `${progress * 100}%`, backgroundColor: remaining < 0 ? theme.error : theme.success }]} />
+                                <View style={[styles.progressBarFill, { width: `${progress * 100}%`, backgroundColor: remaining < 0 ? '#EF4444' : '#10B981' }]} />
                             </View>
                             <Text style={styles.progressText}>
-                                You've spent <Text style={{ fontFamily: 'Outfit-Bold' }}>{Math.round(progress * 100)}%</Text> of your budget
+                                You've spent <Text style={{ fontFamily: 'Outfit-Bold', color: '#E2E8F0' }}>{Math.round(progress * 100)}%</Text> of your budget
                             </Text>
                         </View>
 
                         {/* Expense Visuals (Donut) */}
-                        <View style={styles.chartSection}>
+                        <View style={[styles.glassCard, styles.chartSection]}>
                             <View style={styles.pieWrapper}>
                                 <PieChart
-                                    data={chartData.length > 0 ? chartData : [{ population: 1, color: theme.surfaceHighlight }]}
+                                    data={chartData.length > 0 ? chartData : [{ population: 1, color: 'rgba(255,255,255,0.1)' }]}
                                     width={screenWidth * 0.5}
                                     height={160}
-                                    chartConfig={{ color: () => `rgba(0,0,0,0.5)` }}
+                                    chartConfig={{ color: () => `rgba(255,255,255,0.5)` }}
                                     accessor="population"
                                     backgroundColor="transparent"
                                     paddingLeft="40"
@@ -248,17 +254,22 @@ const TripSummaryScreen = () => {
                         {/* Recent Transactions Header */}
                         <View style={styles.sectionHeader}>
                             <Text style={styles.sectionTitle}>Recent Transactions</Text>
-                            <TouchableOpacity><Text style={styles.viewAll}>View All</Text></TouchableOpacity>
+                            {expenses.length > 3 && (
+                                <TouchableOpacity onPress={() => setShowAllExpenses(!showAllExpenses)}>
+                                    <Text style={styles.viewAll}>{showAllExpenses ? 'Show Less' : 'View All'}</Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
 
                         {/* Expense List */}
                         {expenses.length === 0 ? (
                             <View style={styles.emptyState}>
-                                <Ionicons name="receipt-outline" size={48} color={theme.textSecondary} />
+                                <Ionicons name="receipt-outline" size={48} color="#64748B" />
                                 <Text style={styles.emptyText}>No expenses added yet.</Text>
                             </View>
                         ) : (
-                            expenses.map((expense, index) => {
+                            // Show all or just top 3
+                            (showAllExpenses ? expenses : expenses.slice(0, 3)).map((expense, index) => {
                                 const inputRange = [-1, 0, (index * 70), (index + 2) * 70];
                                 const scale = scrollY.interpolate({
                                     inputRange,
@@ -277,24 +288,27 @@ const TripSummaryScreen = () => {
                                         style={{ transform: [{ scale }], opacity }}
                                     >
                                         <TouchableOpacity
-                                            style={styles.expenseCard}
+                                            onPress={() => navigation.navigate('AddExpense', { expenseToEdit: expense })}
                                             onLongPress={() => handleDeleteExpense(expense.id)}
                                             activeOpacity={0.7}
                                         >
-                                            <View style={[styles.iconContainer, { backgroundColor: getCategoryColor(expense.category) + '30' }]}>
-                                                <Ionicons name={categoryIcons[expense.category]} size={20} color={theme.text} />
+                                            <View style={styles.glassCardRow}>
+                                                <View style={[styles.iconContainer, { backgroundColor: 'rgba(56, 189, 248, 0.1)' }]}>
+                                                    <Ionicons name={categoryIcons[expense.category]} size={20} color="#38BDF8" />
+                                                </View>
+                                                <View style={styles.expenseInfo}>
+                                                    <Text style={styles.expenseTitle}>{expense.title}</Text>
+                                                    <Text style={styles.expenseCategory}>
+                                                        {new Date(expense.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} • {expense.category} • {expense.paidBy}
+                                                    </Text>
+                                                </View>
+                                                <Text style={styles.expenseAmount}>- ₹{expense.amount.toLocaleString()}</Text>
                                             </View>
-                                            <View style={styles.expenseInfo}>
-                                                <Text style={styles.expenseTitle}>{expense.title}</Text>
-                                                <Text style={styles.expenseCategory}>{expense.category} • {expense.paidBy}</Text>
-                                            </View>
-                                            <Text style={styles.expenseAmount}>- ₹{expense.amount.toLocaleString()}</Text>
                                         </TouchableOpacity>
                                     </Animated.View>
                                 );
                             })
                         )}
-
                     </Animated.View>
                 </View>
             </Animated.ScrollView>
@@ -306,11 +320,12 @@ const TripSummaryScreen = () => {
                     onPress={() => navigation.navigate('AddExpense')}
                     activeOpacity={0.8}
                 >
-                    <Ionicons name="add" size={32} color="#fff" />
+                    <Ionicons name="add" size={24} color="#fff" />
+                    <Text style={styles.fabText}>Add Expense</Text>
                 </TouchableOpacity>
             </View>
 
-        </ScreenWrapper>
+        </ThemedBackground>
     );
 };
 
@@ -326,17 +341,17 @@ const getStyles = (theme) => StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        paddingTop: 50,
+        paddingTop: 60, // Standardized Header Height
     },
     glassBtn: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: 'rgba(0,0,0,0.3)',
+        backgroundColor: 'rgba(30, 41, 59, 0.5)',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: theme.border,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     headerTitleContainer: {
         position: 'absolute',
@@ -346,8 +361,8 @@ const getStyles = (theme) => StyleSheet.create({
     tripNameLarge: {
         fontSize: 32,
         fontFamily: 'Outfit-Bold',
-        color: theme.text,
-        textShadowColor: 'rgba(0,0,0,0.3)',
+        color: '#fff',
+        textShadowColor: 'rgba(0,0,0,0.5)',
         textShadowOffset: { width: 0, height: 2 },
         textShadowRadius: 4,
         marginBottom: 8,
@@ -360,9 +375,11 @@ const getStyles = (theme) => StyleSheet.create({
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
     },
     locationText: {
-        color: theme.text,
+        color: '#fff',
         marginLeft: 6,
         fontFamily: 'Outfit-Medium',
         fontSize: 14,
@@ -371,22 +388,27 @@ const getStyles = (theme) => StyleSheet.create({
         marginTop: -30,
         borderTopLeftRadius: 30,
         borderTopRightRadius: 30,
-        backgroundColor: theme.background,
+        backgroundColor: '#0F172A',
         paddingHorizontal: 20,
         paddingTop: 30,
         paddingBottom: 100,
         minHeight: 500,
     },
-    budgetCard: {
-        backgroundColor: theme.surface,
+    glassCard: {
         borderRadius: 24,
         padding: 20,
         marginBottom: 20,
-        shadowColor: theme.shadowConfig?.shadowColor || "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.2,
-        shadowRadius: 15,
-        elevation: 2,
+        backgroundColor: theme.surface,
+        borderWidth: 1,
+        borderColor: theme.border,
+    },
+    glassCardRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 20,
+        marginBottom: 12,
+        backgroundColor: theme.surface,
         borderWidth: 1,
         borderColor: theme.border,
     },
@@ -397,14 +419,14 @@ const getStyles = (theme) => StyleSheet.create({
     },
     label: {
         fontSize: 12,
-        color: theme.textSecondary,
+        color: '#94A3B8',
         fontFamily: 'Outfit-Regular',
         marginBottom: 4,
     },
     valuePrimary: {
         fontSize: 22,
         fontFamily: 'Outfit-Bold',
-        color: theme.text,
+        color: '#F8FAFC',
     },
     valueRight: {
         fontSize: 22,
@@ -412,7 +434,7 @@ const getStyles = (theme) => StyleSheet.create({
     },
     progressBarContainer: {
         height: 8,
-        backgroundColor: theme.surfaceHighlight, // Subtle track
+        backgroundColor: 'rgba(15, 23, 42, 0.5)', // Darker track
         borderRadius: 4,
         marginBottom: 10,
         overflow: 'hidden',
@@ -423,24 +445,14 @@ const getStyles = (theme) => StyleSheet.create({
     },
     progressText: {
         fontSize: 12,
-        color: theme.textSecondary,
+        color: '#94A3B8',
         textAlign: 'right',
         fontFamily: 'Outfit-Regular',
     },
     chartSection: {
         flexDirection: 'row',
-        backgroundColor: theme.surface,
-        borderRadius: 24,
-        padding: 20,
-        marginBottom: 25,
         alignItems: 'center',
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.2,
-        shadowRadius: 15,
-        elevation: 2,
-        borderWidth: 1,
-        borderColor: theme.border,
+        marginBottom: 25,
     },
     pieWrapper: {
         position: 'relative',
@@ -455,13 +467,13 @@ const getStyles = (theme) => StyleSheet.create({
     },
     totalLabel: {
         fontSize: 10,
-        color: theme.textSecondary,
+        color: '#94A3B8',
         fontFamily: 'Outfit-Regular',
     },
     totalValue: {
         fontSize: 14,
         fontFamily: 'Outfit-Bold',
-        color: theme.text,
+        color: '#F8FAFC',
     },
     legendContainer: {
         marginLeft: 15,
@@ -481,13 +493,13 @@ const getStyles = (theme) => StyleSheet.create({
     },
     legendName: {
         fontSize: 12,
-        color: theme.textSecondary,
+        color: '#94A3B8',
         fontFamily: 'Outfit-Regular',
     },
     legendAmount: {
         fontSize: 14,
         fontFamily: 'Outfit-Bold',
-        color: theme.text,
+        color: '#F8FAFC',
     },
     sectionHeader: {
         flexDirection: 'row',
@@ -498,27 +510,12 @@ const getStyles = (theme) => StyleSheet.create({
     sectionTitle: {
         fontSize: 18,
         fontFamily: 'Outfit-Bold',
-        color: theme.text,
+        color: '#F8FAFC',
     },
     viewAll: {
         fontSize: 14,
-        color: theme.secondary,
+        color: '#38BDF8',
         fontFamily: 'Outfit-Medium',
-    },
-    expenseCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: theme.surface,
-        padding: 16,
-        borderRadius: 20,
-        marginBottom: 12,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-        elevation: 1,
-        borderWidth: 1,
-        borderColor: theme.border,
     },
     iconContainer: {
         width: 48,
@@ -534,18 +531,18 @@ const getStyles = (theme) => StyleSheet.create({
     expenseTitle: {
         fontSize: 16,
         fontFamily: 'Outfit-Bold',
-        color: theme.text,
+        color: '#F8FAFC',
         marginBottom: 4,
     },
     expenseCategory: {
         fontSize: 12,
-        color: theme.textSecondary,
+        color: '#94A3B8',
         fontFamily: 'Outfit-Regular',
     },
     expenseAmount: {
         fontSize: 16,
         fontFamily: 'Outfit-Bold',
-        color: theme.error,
+        color: '#F87171', // Red
     },
     emptyState: {
         alignItems: 'center',
@@ -556,11 +553,11 @@ const getStyles = (theme) => StyleSheet.create({
         marginTop: 10,
         fontFamily: 'Outfit-Regular',
         fontSize: 14,
-        color: theme.textSecondary,
+        color: '#94A3B8',
     },
     fabContainer: {
         position: 'absolute',
-        bottom: 30,
+        bottom: 40, // Raised slightly
         left: 0,
         right: 0,
         alignItems: 'center',
@@ -568,19 +565,26 @@ const getStyles = (theme) => StyleSheet.create({
         zIndex: 100,
     },
     fabButton: {
-        width: 64,
-        height: 64,
+        flexDirection: 'row', // Row for Icon + Text
+        paddingHorizontal: 24,
+        paddingVertical: 16,
         borderRadius: 32,
-        backgroundColor: theme.primary,
+        backgroundColor: '#38BDF8',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: theme.primary,
+        shadowColor: "#38BDF8",
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.3,
+        shadowOpacity: 0.4,
         shadowRadius: 12,
         elevation: 8,
-        borderWidth: 4,
-        borderColor: theme.border,
+        borderWidth: 2,
+        borderColor: 'rgba(255,255,255,0.2)',
+    },
+    fabText: {
+        color: '#fff',
+        fontFamily: 'Outfit-Bold',
+        fontSize: 16,
+        marginLeft: 8,
     }
 });
 

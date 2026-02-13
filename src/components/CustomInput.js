@@ -3,23 +3,38 @@ import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
-const CustomInput = ({ label, value, onChangeText, placeholder, icon, keyboardType = 'default', multiline = false }) => {
+const CustomInput = ({
+    label,
+    value,
+    onChangeText,
+    placeholder,
+    icon,
+    keyboardType = 'default',
+    multiline = false,
+    inputContainerStyle,
+    labelStyle,
+    style,
+    placeholderTextColor,
+    iconColor,
+    ...props
+}) => {
     const { theme } = useTheme();
     const styles = getStyles(theme);
 
     return (
         <View style={styles.container}>
-            {label && <Text style={styles.label}>{label}</Text>}
-            <View style={styles.inputContainer}>
-                {icon && <Ionicons name={icon} size={20} color={theme.textSecondary} style={styles.icon} />}
+            {label && <Text style={[styles.label, labelStyle]}>{label}</Text>}
+            <View style={[styles.inputContainer, inputContainerStyle]}>
+                {icon && <Ionicons name={icon} size={20} color={iconColor || theme.textSecondary} style={styles.icon} />}
                 <TextInput
-                    style={[styles.input, multiline && styles.multiline]}
+                    style={[styles.input, multiline && styles.multiline, style]}
                     value={value}
                     onChangeText={onChangeText}
                     placeholder={placeholder}
-                    placeholderTextColor={theme.textSecondary + '70'} // 70% opacity
+                    placeholderTextColor={placeholderTextColor || theme.textSecondary + '70'}
                     keyboardType={keyboardType}
                     multiline={multiline}
+                    {...props}
                 />
             </View>
         </View>

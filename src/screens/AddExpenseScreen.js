@@ -1,24 +1,30 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, KeyboardAvoidingView } from 'react-native';
-import ScreenWrapper from '../components/ScreenWrapper';
+import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
+
 import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
 import { useTripContext } from '../context/TripContext';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import ThemedBackground from '../components/ThemedBackground';
 
 const AddExpenseScreen = () => {
-    const { addExpense, currentTrip } = useTripContext();
+    const { addExpense, editExpense, currentTrip } = useTripContext();
     const navigation = useNavigation();
+    const route = useRoute();
     const { theme } = useTheme();
     const styles = getStyles(theme);
 
-    const [title, setTitle] = useState('');
-    const [amount, setAmount] = useState('');
-    const [category, setCategory] = useState('Food');
-    const [paidBy, setPaidBy] = useState(currentTrip?.members[0] || '');
-    const [splitBetween, setSplitBetween] = useState(currentTrip?.members || []);
+    const expenseToEdit = route.params?.expenseToEdit;
+
+    const [title, setTitle] = useState(expenseToEdit?.title || '');
+    const [amount, setAmount] = useState(expenseToEdit?.amount?.toString() || '');
+    const [category, setCategory] = useState(expenseToEdit?.category || 'Food');
+    const [paidBy, setPaidBy] = useState(expenseToEdit?.paidBy || (currentTrip?.members[0] || ''));
+    const [splitBetween, setSplitBetween] = useState(expenseToEdit?.splitBetween || (currentTrip?.members || []));
 
     const categories = [
         { name: 'Food', icon: 'restaurant' },
@@ -29,23 +35,27 @@ const AddExpenseScreen = () => {
         { name: 'Other', icon: 'receipt' },
     ];
 
-    const handleAddExpense = () => {
+    const handleSaveExpense = () => {
         if (!amount || !paidBy) {
             Alert.alert('Missing Fields', 'Please fill in the amount and who paid.');
             return;
         }
 
-        const expense = {
-            id: Date.now().toString(),
+        const expenseData = {
             title: title.trim() || 'General Expense',
             amount: parseFloat(amount),
             category,
             paidBy,
             splitBetween,
-            date: new Date().toISOString(),
+            date: expenseToEdit?.date || new Date().toISOString(),
         };
 
-        addExpense(currentTrip.id, expense);
+        if (expenseToEdit) {
+            editExpense(expenseToEdit.id, expenseData);
+        } else {
+            addExpense(currentTrip.id, { ...expenseData, id: Date.now().toString() });
+        }
+
         navigation.goBack();
     };
 
@@ -62,16 +72,16 @@ const AddExpenseScreen = () => {
     };
 
     return (
-        <ScreenWrapper>
+        <ThemedBackground>
             <KeyboardAvoidingView
                 behavior={Platform.OS === "ios" ? "padding" : "height"}
                 style={{ flex: 1 }}
             >
                 <View style={styles.header}>
                     <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <Ionicons name="close" size={24} color={theme.text} />
+                        <Ionicons name="arrow-back" size={24} color="#F8FAFC" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Add Expense</Text>
+                    <Text style={styles.headerTitle}>{expenseToEdit ? 'Edit Expense' : 'Add Expense'}</Text>
                     <View style={{ width: 40 }} />
                 </View>
 
@@ -85,15 +95,11 @@ const AddExpenseScreen = () => {
                             onChangeText={setAmount}
                             placeholder="0"
                             keyboardType="numeric"
-                            style={styles.amountInput} // Need to pass style prop to input if supported or modify CustomInput
-                        // CustomInput might need update to accept style override properly for this big font
+                            style={styles.amountInput}
+                            placeholderTextColor="rgba(255,255,255,0.3)"
+                            inputContainerStyle={{ borderWidth: 0, backgroundColor: 'transparent' }}
                         />
                     </View>
-
-                    {/* Temporarily using a direct heavy input for amount to match design intention if CustomInput is limited, 
-                        BUT assuming CustomInput is flexible based on previous usage. 
-                        Let's just use CustomInput normally for now but style the container.
-                     */}
 
                     <View style={styles.formSection}>
                         <CustomInput
@@ -102,15 +108,10 @@ const AddExpenseScreen = () => {
                             value={title}
                             onChangeText={setTitle}
                             icon="create-outline"
-                        />
-
-                        <CustomInput
-                            label="Amount"
-                            placeholder="0.00"
-                            value={amount}
-                            onChangeText={setAmount}
-                            keyboardType="numeric"
-                            icon="cash-outline"
+                            inputContainerStyle={styles.glassInput}
+                            style={{ color: '#fff' }}
+                            placeholderTextColor="rgba(255,255,255,0.5)"
+                            labelStyle={{ color: '#94A3B8' }}
                         />
 
                         {/* Category Selection */}
@@ -125,7 +126,7 @@ const AddExpenseScreen = () => {
                                     <Ionicons
                                         name={cat.icon}
                                         size={18}
-                                        color={category === cat.name ? '#fff' : theme.textSecondary}
+                                        color={category === cat.name ? '#fff' : '#94A3B8'}
                                     />
                                     <Text style={[styles.categoryText, category === cat.name && { color: '#fff' }]}>
                                         {cat.name}
@@ -146,7 +147,7 @@ const AddExpenseScreen = () => {
                                     <Ionicons
                                         name="person-circle"
                                         size={20}
-                                        color={paidBy === member ? '#fff' : theme.textSecondary}
+                                        color={paidBy === member ? '#fff' : '#94A3B8'}
                                         style={{ marginRight: 6 }}
                                     />
                                     <Text style={[styles.memberText, paidBy === member && { color: '#fff' }]}>
@@ -184,14 +185,15 @@ const AddExpenseScreen = () => {
                         </View>
 
                         <CustomButton
-                            title="Add Expense"
-                            onPress={handleAddExpense}
-                            style={{ marginVertical: 20 }}
+                            title={expenseToEdit ? 'Save Changes' : 'Add Expense'}
+                            onPress={handleSaveExpense}
+                            style={styles.saveBtn}
+                            textStyle={{ color: '#fff', fontSize: 18 }}
                         />
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
-        </ScreenWrapper>
+        </ThemedBackground>
     );
 };
 
@@ -201,40 +203,42 @@ const getStyles = (theme) => StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        paddingTop: 10,
+        paddingTop: 60, // Standardized Header Height
         marginBottom: 20,
     },
     backButton: {
         width: 40,
         height: 40,
         borderRadius: 20,
-        backgroundColor: theme.surface,
+        backgroundColor: 'rgba(30, 41, 59, 0.5)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: theme.border,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     headerTitle: {
         fontSize: 20,
         fontFamily: 'Outfit-Bold',
-        color: theme.text,
+        color: '#F8FAFC',
     },
     amountContainer: {
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 30,
+        flexDirection: 'row',
     },
     currencySymbol: {
-        fontSize: 24,
-        color: theme.textSecondary,
-        marginBottom: 5,
+        fontSize: 40,
+        color: '#94A3B8',
+        marginRight: 5,
         fontFamily: 'Outfit-Bold',
     },
     amountInput: {
-        fontSize: 40,
-        color: theme.text,
+        fontSize: 48,
+        color: '#fff',
         fontFamily: 'Outfit-Bold',
         textAlign: 'center',
+        minWidth: 100,
     },
     formSection: {
         backgroundColor: theme.surface,
@@ -245,13 +249,19 @@ const getStyles = (theme) => StyleSheet.create({
         borderWidth: 1,
         borderColor: theme.border,
         flex: 1,
+        minHeight: 500,
+    },
+    glassInput: {
+        backgroundColor: 'rgba(15, 23, 42, 0.5)',
+        borderColor: 'rgba(148, 163, 184, 0.2)',
+        borderWidth: 1,
     },
     label: {
         fontSize: 14,
-        color: theme.textSecondary,
-        fontFamily: 'Outfit-Medium',
+        color: '#94A3B8',
+        fontFamily: 'Outfit-Bold',
         marginBottom: 12,
-        marginTop: 10,
+        marginTop: 15,
     },
     categoryContainer: {
         flexDirection: 'row',
@@ -262,20 +272,20 @@ const getStyles = (theme) => StyleSheet.create({
     categoryChip: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.surfaceHighlight,
+        backgroundColor: 'rgba(15, 23, 42, 0.5)',
         paddingVertical: 10,
         paddingHorizontal: 16,
         borderRadius: 20,
         borderWidth: 1,
-        borderColor: theme.border,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     selectedCategory: {
-        backgroundColor: theme.primary,
-        borderColor: theme.primary,
+        backgroundColor: '#38BDF8',
+        borderColor: '#38BDF8',
     },
     categoryText: {
         fontSize: 14,
-        color: theme.textSecondary,
+        color: '#94A3B8',
         marginLeft: 6,
         fontFamily: 'Outfit-Medium',
     },
@@ -286,21 +296,21 @@ const getStyles = (theme) => StyleSheet.create({
     memberChip: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.surfaceHighlight,
+        backgroundColor: 'rgba(15, 23, 42, 0.5)',
         paddingVertical: 10,
         paddingHorizontal: 16,
         borderRadius: 20,
         marginRight: 10,
         borderWidth: 1,
-        borderColor: theme.border,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     selectedMember: {
-        backgroundColor: theme.secondary,
-        borderColor: theme.secondary,
+        backgroundColor: '#8B5CF6', // Purple
+        borderColor: '#8B5CF6',
     },
     memberText: {
         fontSize: 14,
-        color: theme.text,
+        color: '#E2E8F0',
         fontFamily: 'Outfit-Medium',
     },
     splitList: {
@@ -311,21 +321,29 @@ const getStyles = (theme) => StyleSheet.create({
     splitOption: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.surfaceHighlight,
+        backgroundColor: 'rgba(15, 23, 42, 0.5)',
         paddingVertical: 8,
         paddingHorizontal: 14,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: theme.border,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     selectedSplit: {
-        backgroundColor: theme.success,
-        borderColor: theme.success,
+        backgroundColor: '#10B981', // Emerald
+        borderColor: '#10B981',
     },
     splitText: {
         fontSize: 13,
-        color: theme.text,
+        color: '#E2E8F0',
         fontFamily: 'Outfit-Regular',
+    },
+    saveBtn: {
+        marginVertical: 30,
+        backgroundColor: '#38BDF8',
+        shadowColor: "#38BDF8",
+        shadowOpacity: 0.4,
+        shadowRadius: 15,
+        elevation: 5,
     }
 });
 

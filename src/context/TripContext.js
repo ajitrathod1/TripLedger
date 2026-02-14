@@ -1,28 +1,85 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { db } from '../firebase/config';
-import { collection, doc, setDoc, getDocs, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
+import {
+    getUserTrips,
+    createTrip as dbCreateTrip,
+    updateTrip as dbUpdateTrip,
+    deleteTrip as dbDeleteTrip,
+    addExpense as dbAddExpense,
+    updateExpense as dbUpdateExpense,
+    deleteExpense as dbDeleteExpense,
+    addMemberToTrip,
+    removeMemberFromTrip,
+    subscribeToUserTrips,
+    subscribeToTrip,
+    calculateSettlements,
+    getTripStats
+} from '../firebase/database';
 
 const TripContext = createContext();
 
 export const TripProvider = ({ children }) => {
-    const { user } = useAuth(); // Get current user
+    const { user } = useAuth();
     const [trips, setTrips] = useState([]);
     const [currentTrip, setCurrentTrip] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // Load data whenever user changes (Login/Logout)
+    // Real-time subscription cleanup
     useEffect(() => {
-        setLoading(true);
-        if (user) {
-            loadFromFirestore();
-        } else {
-            loadFromStorage();
-        }
+        let unsubscribeTrips = null;
+        let unsubscribeCurrentTrip = null;
+
+        const setupSubscriptions = async () => {
+            setLoading(true);
+            setError(null);
+
+            if (user) {
+                try {
+                    // Subscribe to user's trips (Real-time updates)
+                    unsubscribeTrips = subscribeToUserTrips(user.uid, (updatedTrips) => {
+                        setTrips(updatedTrips);
+                        setLoading(false);
+                    });
+                } catch (e) {
+                    console.error("❌ Subscription Error:", e);
+                    setError(e.message);
+                    setLoading(false);
+                }
+            } else {
+                // Load from local storage when not logged in
+                loadFromStorage();
+            }
+        };
+
+        setupSubscriptions();
+
+        // Cleanup subscriptions on unmount or user change
+        return () => {
+            if (unsubscribeTrips) unsubscribeTrips();
+            if (unsubscribeCurrentTrip) unsubscribeCurrentTrip();
+        };
     }, [user]);
 
-    // --- Data Loading Functions ---
+    // Subscribe to current trip updates
+    useEffect(() => {
+        let unsubscribe = null;
+
+        if (user && currentTrip?.id) {
+            unsubscribe = subscribeToTrip(currentTrip.id, (updatedTrip) => {
+                if (updatedTrip) {
+                    setCurrentTrip(updatedTrip);
+                }
+            });
+        }
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [user, currentTrip?.id]);
+
+    // --- Local Storage Functions (Offline Mode) ---
 
     const loadFromStorage = async () => {
         try {
@@ -30,153 +87,330 @@ export const TripProvider = ({ children }) => {
             if (storedTrips) {
                 const parsedTrips = JSON.parse(storedTrips);
                 setTrips(parsedTrips);
-                // Don't auto-set currentTrip, let user select or logic handle it
             } else {
                 setTrips([]);
             }
         } catch (e) {
-            console.error("Local Load Error", e);
+            console.error("❌ Local Load Error:", e);
+            setError(e.message);
         } finally {
             setLoading(false);
         }
     };
 
-    const loadFromFirestore = async () => {
+    const saveToStorage = async (updatedTrips) => {
         try {
-            const querySnapshot = await getDocs(collection(db, 'users', user.uid, 'trips'));
-            const cloudTrips = [];
-            querySnapshot.forEach((doc) => {
-                cloudTrips.push(doc.data());
-            });
-            // Sort by ID (timestamp) usually
-            cloudTrips.sort((a, b) => b.id - a.id);
-            setTrips(cloudTrips);
+            await AsyncStorage.setItem('trips', JSON.stringify(updatedTrips));
         } catch (e) {
-            console.error("Firestore Load Error", e);
-        } finally {
-            setLoading(false);
+            console.error("❌ AsyncStorage Error:", e);
         }
     };
 
-    // --- Helper to update State & Storage/Cloud ---
+    // --- Trip Actions ---
 
-    const persistData = async (newTrips, operation, affectedTrip = null) => {
-        setTrips(newTrips); // Optimistic Update
+    const addTrip = async (tripData) => {
+        try {
+            setError(null);
 
-        if (user) {
-            // CLOUD MODE
-            try {
-                if (operation === 'add' || operation === 'update') {
-                    if (affectedTrip) {
-                        await setDoc(doc(db, 'users', user.uid, 'trips', affectedTrip.id), affectedTrip);
-                    }
-                } else if (operation === 'delete') {
-                    if (affectedTrip) {
-                        await deleteDoc(doc(db, 'users', user.uid, 'trips', affectedTrip.id));
-                    }
+            if (user) {
+                // Cloud mode
+                const newTrip = await dbCreateTrip(user.uid, {
+                    ...tripData,
+                    ownerName: user.displayName || user.email,
+                    ownerEmail: user.email
+                });
+
+                // Optimistic update (real-time listener will update anyway)
+                setCurrentTrip(newTrip);
+                return newTrip;
+            } else {
+                // Local mode
+                const newTrip = {
+                    id: Date.now().toString(),
+                    ...tripData,
+                    members: ['You'],
+                    memberDetails: {
+                        'You': {
+                            name: 'You',
+                            role: 'owner',
+                            joinedAt: new Date().toISOString()
+                        }
+                    },
+                    expenses: [],
+                    createdAt: new Date().toISOString()
+                };
+
+                const updatedTrips = [...trips, newTrip];
+                setTrips(updatedTrips);
+                setCurrentTrip(newTrip);
+                await saveToStorage(updatedTrips);
+                return newTrip;
+            }
+        } catch (e) {
+            console.error("❌ Add Trip Error:", e);
+            setError(e.message);
+            throw e;
+        }
+    };
+
+    const updateTrip = async (tripId, updatedData) => {
+        try {
+            setError(null);
+
+            if (user) {
+                // Cloud mode
+                await dbUpdateTrip(tripId, updatedData);
+
+                // Update current trip if it's the one being updated
+                if (currentTrip?.id === tripId) {
+                    setCurrentTrip(prev => ({ ...prev, ...updatedData }));
                 }
-            } catch (e) {
-                console.error("Firestore Sync Error", e);
-                // TODO: Revert state if needed
+            } else {
+                // Local mode
+                const updatedTrips = trips.map(t =>
+                    t.id === tripId ? { ...t, ...updatedData } : t
+                );
+
+                setTrips(updatedTrips);
+
+                if (currentTrip?.id === tripId) {
+                    setCurrentTrip(prev => ({ ...prev, ...updatedData }));
+                }
+
+                await saveToStorage(updatedTrips);
             }
-        } else {
-            // LOCAL MODE
-            try {
-                await AsyncStorage.setItem('trips', JSON.stringify(newTrips));
-            } catch (e) {
-                console.error("AsyncStorage Error", e);
-            }
+        } catch (e) {
+            console.error("❌ Update Trip Error:", e);
+            setError(e.message);
+            throw e;
         }
     };
 
-    // --- Actions ---
+    const deleteTrip = async (tripId) => {
+        try {
+            setError(null);
 
-    const addTrip = (tripData) => {
-        const newTrip = {
-            members: [],
-            ...tripData,
-            id: Date.now().toString(),
-            expenses: []
-        };
-        const updatedTrips = [...trips, newTrip];
-        setCurrentTrip(newTrip);
-        persistData(updatedTrips, 'add', newTrip);
+            if (user) {
+                // Cloud mode
+                await dbDeleteTrip(tripId, user.uid);
+
+                if (currentTrip?.id === tripId) {
+                    setCurrentTrip(null);
+                }
+            } else {
+                // Local mode
+                const updatedTrips = trips.filter(t => t.id !== tripId);
+                setTrips(updatedTrips);
+
+                if (currentTrip?.id === tripId) {
+                    setCurrentTrip(null);
+                }
+
+                await saveToStorage(updatedTrips);
+            }
+        } catch (e) {
+            console.error("❌ Delete Trip Error:", e);
+            setError(e.message);
+            throw e;
+        }
     };
 
-    const updateTrip = (tripId, updatedData) => {
-        let updatedTrip = null;
-        const updatedTrips = trips.map(t => {
-            if (t.id === tripId) {
-                updatedTrip = { ...t, ...updatedData };
-                return updatedTrip;
-            }
-            return t;
-        });
+    // --- Member Actions ---
 
-        if (currentTrip && currentTrip.id === tripId) {
-            setCurrentTrip(updatedTrip);
+    const addMember = async (tripId, memberData) => {
+        try {
+            setError(null);
+
+            if (user) {
+                await addMemberToTrip(tripId, memberData);
+            } else {
+                // Local mode
+                const updatedTrips = trips.map(t => {
+                    if (t.id === tripId) {
+                        const memberId = memberData.id || Date.now().toString();
+                        return {
+                            ...t,
+                            members: [...(t.members || []), memberId],
+                            memberDetails: {
+                                ...(t.memberDetails || {}),
+                                [memberId]: {
+                                    name: memberData.name,
+                                    email: memberData.email || '',
+                                    role: 'member',
+                                    joinedAt: new Date().toISOString()
+                                }
+                            }
+                        };
+                    }
+                    return t;
+                });
+
+                setTrips(updatedTrips);
+
+                if (currentTrip?.id === tripId) {
+                    const updated = updatedTrips.find(t => t.id === tripId);
+                    setCurrentTrip(updated);
+                }
+
+                await saveToStorage(updatedTrips);
+            }
+        } catch (e) {
+            console.error("❌ Add Member Error:", e);
+            setError(e.message);
+            throw e;
+        }
+    };
+
+    const removeMember = async (tripId, memberId) => {
+        try {
+            setError(null);
+
+            if (user) {
+                await removeMemberFromTrip(tripId, memberId);
+            } else {
+                // Local mode
+                const updatedTrips = trips.map(t => {
+                    if (t.id === tripId) {
+                        const updatedMemberDetails = { ...t.memberDetails };
+                        delete updatedMemberDetails[memberId];
+
+                        return {
+                            ...t,
+                            members: t.members.filter(m => m !== memberId),
+                            memberDetails: updatedMemberDetails
+                        };
+                    }
+                    return t;
+                });
+
+                setTrips(updatedTrips);
+
+                if (currentTrip?.id === tripId) {
+                    const updated = updatedTrips.find(t => t.id === tripId);
+                    setCurrentTrip(updated);
+                }
+
+                await saveToStorage(updatedTrips);
+            }
+        } catch (e) {
+            console.error("❌ Remove Member Error:", e);
+            setError(e.message);
+            throw e;
+        }
+    };
+
+    // --- Expense Actions ---
+
+    const addExpense = async (expenseData) => {
+        if (!currentTrip) {
+            throw new Error('No trip selected');
         }
 
-        persistData(updatedTrips, 'update', updatedTrip);
+        try {
+            setError(null);
+
+            if (user) {
+                await dbAddExpense(currentTrip.id, expenseData);
+            } else {
+                // Local mode
+                const newExpense = {
+                    id: Date.now().toString(),
+                    ...expenseData,
+                    date: expenseData.date || new Date().toISOString(),
+                    createdAt: new Date().toISOString()
+                };
+
+                const updatedTrip = {
+                    ...currentTrip,
+                    expenses: [newExpense, ...(currentTrip.expenses || [])]
+                };
+
+                const updatedTrips = trips.map(t =>
+                    t.id === updatedTrip.id ? updatedTrip : t
+                );
+
+                setTrips(updatedTrips);
+                setCurrentTrip(updatedTrip);
+                await saveToStorage(updatedTrips);
+            }
+        } catch (e) {
+            console.error("❌ Add Expense Error:", e);
+            setError(e.message);
+            throw e;
+        }
     };
 
-    const deleteTrip = (tripId) => {
-        const tripToDelete = trips.find(t => t.id === tripId);
-        const updatedTrips = trips.filter(t => t.id !== tripId);
-
-        if (currentTrip && currentTrip.id === tripId) {
-            setCurrentTrip(null);
+    const editExpense = async (expenseId, updatedExpenseData) => {
+        if (!currentTrip) {
+            throw new Error('No trip selected');
         }
 
-        persistData(updatedTrips, 'delete', tripToDelete);
-    };
+        try {
+            setError(null);
 
-    const addExpense = (expenseData) => {
-        if (!currentTrip) return;
+            if (user) {
+                await dbUpdateExpense(currentTrip.id, expenseId, updatedExpenseData);
+            } else {
+                // Local mode
+                const updatedExpenses = currentTrip.expenses.map(e =>
+                    e.id === expenseId ? { ...e, ...updatedExpenseData } : e
+                );
 
-        const newExpense = {
-            ...expenseData,
-            id: Date.now().toString(),
-            date: new Date().toISOString()
-        };
+                const updatedTrip = { ...currentTrip, expenses: updatedExpenses };
+                const updatedTrips = trips.map(t =>
+                    t.id === updatedTrip.id ? updatedTrip : t
+                );
 
-        const updatedTrip = {
-            ...currentTrip,
-            expenses: [newExpense, ...currentTrip.expenses]
-        };
-
-        const updatedTrips = trips.map(t => t.id === updatedTrip.id ? updatedTrip : t);
-
-        setCurrentTrip(updatedTrip);
-        persistData(updatedTrips, 'update', updatedTrip);
-    };
-
-    const editExpense = (expenseId, updatedExpenseData) => {
-        if (!currentTrip) return;
-
-        const updatedExpenses = currentTrip.expenses.map(e => {
-            if (e.id === expenseId) {
-                return { ...e, ...updatedExpenseData };
+                setTrips(updatedTrips);
+                setCurrentTrip(updatedTrip);
+                await saveToStorage(updatedTrips);
             }
-            return e;
-        });
-
-        const updatedTrip = { ...currentTrip, expenses: updatedExpenses };
-        const updatedTrips = trips.map(t => t.id === updatedTrip.id ? updatedTrip : t);
-
-        setCurrentTrip(updatedTrip);
-        persistData(updatedTrips, 'update', updatedTrip);
+        } catch (e) {
+            console.error("❌ Edit Expense Error:", e);
+            setError(e.message);
+            throw e;
+        }
     };
 
-    const deleteExpense = (expenseId) => {
-        if (!currentTrip) return;
+    const deleteExpense = async (expenseId) => {
+        if (!currentTrip) {
+            throw new Error('No trip selected');
+        }
 
-        const updatedExpenses = currentTrip.expenses.filter(e => e.id !== expenseId);
-        const updatedTrip = { ...currentTrip, expenses: updatedExpenses };
-        const updatedTrips = trips.map(t => t.id === updatedTrip.id ? updatedTrip : t);
+        try {
+            setError(null);
 
-        setCurrentTrip(updatedTrip);
-        persistData(updatedTrips, 'update', updatedTrip);
+            if (user) {
+                await dbDeleteExpense(currentTrip.id, expenseId);
+            } else {
+                // Local mode
+                const updatedExpenses = currentTrip.expenses.filter(e => e.id !== expenseId);
+                const updatedTrip = { ...currentTrip, expenses: updatedExpenses };
+                const updatedTrips = trips.map(t =>
+                    t.id === updatedTrip.id ? updatedTrip : t
+                );
+
+                setTrips(updatedTrips);
+                setCurrentTrip(updatedTrip);
+                await saveToStorage(updatedTrips);
+            }
+        } catch (e) {
+            console.error("❌ Delete Expense Error:", e);
+            setError(e.message);
+            throw e;
+        }
+    };
+
+    // --- Utility Functions ---
+
+    const getSettlements = () => {
+        if (!currentTrip) return [];
+        return calculateSettlements(currentTrip);
+    };
+
+    const getStats = () => {
+        if (!currentTrip) return null;
+        return getTripStats(currentTrip);
     };
 
     return (
@@ -184,13 +418,26 @@ export const TripProvider = ({ children }) => {
             trips,
             currentTrip,
             setCurrentTrip,
+            loading,
+            error,
+
+            // Trip actions
             addTrip,
             updateTrip,
             deleteTrip,
+
+            // Member actions
+            addMember,
+            removeMember,
+
+            // Expense actions
             addExpense,
-            deleteExpense,
             editExpense,
-            loading
+            deleteExpense,
+
+            // Utilities
+            getSettlements,
+            getStats
         }}>
             {children}
         </TripContext.Provider>

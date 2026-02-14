@@ -1,0 +1,84 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ==================== HELPER FUNCTIONS ====================
+    
+    // Check if user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Check if user is the owner of the resource
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Check if user is a member of the trip
+    function isTripMember(tripId) {
+      return isSignedIn() && 
+             request.auth.uid in get(/databases/$(database)/documents/trips/$(tripId)).data.members;
+    }
+    
+    // Check if user is the trip owner
+    function isTripOwner(tripId) {
+      return isSignedIn() && 
+             request.auth.uid == get(/databases/$(database)/documents/trips/$(tripId)).data.ownerId;
+    }
+    
+    // ==================== USER COLLECTION ====================
+    
+    match /users/{userId} {
+      // Anyone authenticated can read user profiles (for adding members)
+      allow read: if isSignedIn();
+      
+      // Only the user can create/update their own profile
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      
+      // Only the user can delete their own profile
+      allow delete: if isSignedIn() && isOwner(userId);
+      
+      // User's trip references subcollection
+      match /trips/{tripId} {
+        // Only the user can read/write their trip references
+        allow read, write: if isSignedIn() && isOwner(userId);
+      }
+    }
+    
+    // ==================== TRIPS COLLECTION ====================
+    
+    match /trips/{tripId} {
+      // Anyone authenticated can create a trip
+      allow create: if isSignedIn() && 
+                       request.resource.data.ownerId == request.auth.uid &&
+                       request.auth.uid in request.resource.data.members;
+      
+      // Only trip members can read the trip
+      allow read: if isSignedIn() && 
+                     request.auth.uid in resource.data.members;
+      
+      // Only trip owner can delete the trip
+      allow delete: if isSignedIn() && 
+                       request.auth.uid == resource.data.ownerId;
+      
+      // Trip members can update expenses, but only owner can update trip details
+      allow update: if isSignedIn() && 
+                       request.auth.uid in resource.data.members &&
+                       (
+                         // Members can update expenses array
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['expenses', 'updatedAt']) ||
+                         // Only owner can update other fields
+                         request.auth.uid == resource.data.ownerId
+                       );
+    }
+    
+    // ==================== DEFAULT DENY ====================
+    
+    // Deny all other access by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

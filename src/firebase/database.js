@@ -88,6 +88,32 @@ export const createTrip = async (userId, tripData) => {
         const tripId = Date.now().toString();
         const tripRef = doc(db, 'trips', tripId);
 
+        const initialMembers = [userId];
+        const initialMemberDetails = {
+            [userId]: {
+                name: tripData.ownerName || 'You',
+                email: tripData.ownerEmail || '',
+                role: 'owner',
+                joinedAt: serverTimestamp()
+            }
+        };
+
+        // Process added members (names)
+        if (tripData.members && Array.isArray(tripData.members)) {
+            tripData.members.forEach(memberName => {
+                if (memberName && typeof memberName === 'string' && memberName.trim() !== '') {
+                    // Generate a simple unique ID for non-user members
+                    const memId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+                    initialMembers.push(memId);
+                    initialMemberDetails[memId] = {
+                        name: memberName.trim(),
+                        role: 'member',
+                        joinedAt: serverTimestamp()
+                    };
+                }
+            });
+        }
+
         const trip = {
             id: tripId,
             name: tripData.name,
@@ -100,15 +126,8 @@ export const createTrip = async (userId, tripData) => {
 
             // Members & Permissions
             ownerId: userId,
-            members: [userId], // Array of user IDs
-            memberDetails: {
-                [userId]: {
-                    name: tripData.ownerName || 'You',
-                    email: tripData.ownerEmail || '',
-                    role: 'owner',
-                    joinedAt: serverTimestamp()
-                }
-            },
+            members: initialMembers,
+            memberDetails: initialMemberDetails,
 
             // Expenses
             expenses: [],
@@ -536,6 +555,9 @@ export const getTripStats = (trip) => {
 /**
  * Calculate settlements (Who owes whom)
  */
+/**
+ * Calculate settlements (Who owes whom)
+ */
 export const calculateSettlements = (trip) => {
     if (!trip || !trip.expenses || !trip.members) {
         return [];
@@ -544,37 +566,47 @@ export const calculateSettlements = (trip) => {
     const members = trip.members;
     const expenses = trip.expenses;
 
-    // Calculate total and share per person
-    const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
-    const sharePerPerson = totalSpent / members.length;
-
-    // Calculate balances
+    // Initialize balances
     const balances = {};
     members.forEach(m => balances[m] = 0);
 
-    // Add what they paid
-    expenses.forEach(e => {
-        balances[e.paidBy] = (balances[e.paidBy] || 0) + e.amount;
-    });
+    // Process each expense to calculate net balances
+    expenses.forEach(expense => {
+        const { amount, paidBy, splitBetween } = expense;
 
-    // Subtract what they should have paid
-    members.forEach(m => {
-        balances[m] -= sharePerPerson;
+        // Validation: Ensure payer and amount exist
+        if (!paidBy || !amount) return;
+
+        // Credit the payer (they paid, so they are owed this amount initially)
+        balances[paidBy] = (balances[paidBy] || 0) + amount;
+
+        // Determine who splits this expense
+        // specific split > all members fallback
+        const splitters = (splitBetween && splitBetween.length > 0) ? splitBetween : members;
+
+        const splitAmount = amount / splitters.length;
+
+        // Debit the splitters (they consumed, so they owe this amount)
+        splitters.forEach(member => {
+            balances[member] = (balances[member] || 0) - splitAmount;
+        });
     });
 
     // Separate debtors and creditors
     const debtors = [];
     const creditors = [];
 
+    // Round balances to 2 decimal places to avoid float precision issues
     Object.keys(balances).forEach(m => {
-        if (balances[m] < -1) {
-            debtors.push({ name: m, amount: -balances[m] });
-        } else if (balances[m] > 1) {
-            creditors.push({ name: m, amount: balances[m] });
+        const balance = Math.round(balances[m] * 100) / 100;
+        if (balance < -0.01) {
+            debtors.push({ name: m, amount: -balance });
+        } else if (balance > 0.01) {
+            creditors.push({ name: m, amount: balance });
         }
     });
 
-    // Calculate settlements
+    // Calculate settlements using a greedy approach
     const transactions = [];
     let i = 0;
     let j = 0;
@@ -582,6 +614,8 @@ export const calculateSettlements = (trip) => {
     while (i < debtors.length && j < creditors.length) {
         const debt = debtors[i];
         const credit = creditors[j];
+
+        // The amount to settle is the minimum of what's owed vs what's receivable
         const amount = Math.min(debt.amount, credit.amount);
 
         if (amount > 0) {
@@ -592,11 +626,13 @@ export const calculateSettlements = (trip) => {
             });
         }
 
+        // Update remaining amounts
         debt.amount -= amount;
         credit.amount -= amount;
 
-        if (debt.amount < 1) i++;
-        if (credit.amount < 1) j++;
+        // Move to next person if their balance is settled (close to 0)
+        if (debt.amount < 0.01) i++;
+        if (credit.amount < 0.01) j++;
     }
 
     return transactions;

@@ -28,19 +28,20 @@ const SettleUpScreen = () => {
         expenses.forEach(expense => {
             const amount = expense.amount;
             const paidBy = expense.paidBy;
-            const splitMembers = expense.splitBetween || members;
+            const splitMembers = (expense.splitBetween && expense.splitBetween.length > 0) ? expense.splitBetween : members;
+
+            // Ensure payer is in balances
+            if (bals[paidBy] === undefined) bals[paidBy] = 0;
+            bals[paidBy] += amount;
+
             // Prevent division by zero
             const count = splitMembers.length || 1;
             const splitAmount = amount / count;
 
-            if (bals[paidBy] !== undefined) {
-                bals[paidBy] += amount;
-            }
-
             splitMembers.forEach(member => {
-                if (bals[member] !== undefined) {
-                    bals[member] -= splitAmount;
-                }
+                // Ensure splitter is in balances
+                if (bals[member] === undefined) bals[member] = 0;
+                bals[member] -= splitAmount;
             });
         });
 

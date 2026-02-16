@@ -170,7 +170,7 @@ const AddExpenseScreen = () => {
                                         style={{ marginRight: 6 }}
                                     />
                                     <Text style={[styles.memberText, paidBy === member && { color: '#fff' }]}>
-                                        {member}
+                                        {currentTrip?.memberDetails?.[member]?.name || member}
                                     </Text>
                                 </TouchableOpacity>
                             ))}
@@ -194,7 +194,7 @@ const AddExpenseScreen = () => {
                                     onPress={() => toggleSplitMember(member)}
                                 >
                                     <Text style={[styles.splitText, splitBetween.includes(member) && !((splitBetween.length === currentTrip?.members.length)) && { color: '#fff' }]}>
-                                        {member}
+                                        {currentTrip?.memberDetails?.[member]?.name || member}
                                     </Text>
                                     {splitBetween.includes(member) && (
                                         <Ionicons name="checkmark" size={16} color="#fff" style={{ marginLeft: 4 }} />

@@ -299,7 +299,7 @@ const TripSummaryScreen = () => {
                                                 <View style={styles.expenseInfo}>
                                                     <Text style={styles.expenseTitle}>{expense.title}</Text>
                                                     <Text style={styles.expenseCategory}>
-                                                        {new Date(expense.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} • {expense.category} • {expense.paidBy}
+                                                        {new Date(expense.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })} • {expense.category} • {currentTrip.memberDetails?.[expense.paidBy]?.name || expense.paidBy}
                                                     </Text>
                                                 </View>
                                                 <Text style={styles.expenseAmount}>- ₹{expense.amount.toLocaleString()}</Text>

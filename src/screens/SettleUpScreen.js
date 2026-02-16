@@ -167,9 +167,11 @@ const SettleUpScreen = () => {
                         <View key={member} style={styles.balanceCard}>
                             <View style={styles.memberInfo}>
                                 <View style={[styles.avatar, { borderColor: isOwed ? '#10B981' : '#EF4444' }]}>
-                                    <Text style={[styles.avatarText, { color: isOwed ? '#10B981' : '#EF4444' }]}>{member[0].toUpperCase()}</Text>
+                                    <Text style={[styles.avatarText, { color: isOwed ? '#10B981' : '#EF4444' }]}>
+                                        {(currentTrip.memberDetails?.[member]?.name || member)[0].toUpperCase()}
+                                    </Text>
                                 </View>
-                                <Text style={styles.memberName}>{member}</Text>
+                                <Text style={styles.memberName}>{currentTrip.memberDetails?.[member]?.name || member}</Text>
                             </View>
                             <View style={styles.balanceInfo}>
                                 <Text style={[styles.balanceLabel, { color: isOwed ? '#10B981' : '#EF4444' }]}>
@@ -191,9 +193,11 @@ const SettleUpScreen = () => {
                             <View style={styles.transactionRow}>
                                 <View style={styles.payerContainer}>
                                     <View style={[styles.miniAvatar, { backgroundColor: 'rgba(239, 68, 68, 0.2)', borderColor: '#EF4444' }]}>
-                                        <Text style={[styles.miniAvatarText, { color: '#EF4444' }]}>{item.from[0]}</Text>
+                                        <Text style={[styles.miniAvatarText, { color: '#EF4444' }]}>
+                                            {(currentTrip.memberDetails?.[item.from]?.name || item.from)[0].toUpperCase()}
+                                        </Text>
                                     </View>
-                                    <Text style={styles.transName}>{item.from}</Text>
+                                    <Text style={styles.transName}>{currentTrip.memberDetails?.[item.from]?.name || item.from}</Text>
                                 </View>
 
                                 <View style={styles.arrowContainer}>
@@ -204,9 +208,11 @@ const SettleUpScreen = () => {
 
                                 <View style={styles.payeeContainer}>
                                     <View style={[styles.miniAvatar, { backgroundColor: 'rgba(16, 185, 129, 0.2)', borderColor: '#10B981' }]}>
-                                        <Text style={[styles.miniAvatarText, { color: '#10B981' }]}>{item.to[0]}</Text>
+                                        <Text style={[styles.miniAvatarText, { color: '#10B981' }]}>
+                                            {(currentTrip.memberDetails?.[item.to]?.name || item.to)[0].toUpperCase()}
+                                        </Text>
                                     </View>
-                                    <Text style={styles.transName}>{item.to}</Text>
+                                    <Text style={styles.transName}>{currentTrip.memberDetails?.[item.to]?.name || item.to}</Text>
                                 </View>
                             </View>
                         </View>

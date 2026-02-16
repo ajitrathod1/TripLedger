@@ -140,6 +140,21 @@ export const TripProvider = ({ children }) => {
                     createdAt: new Date().toISOString()
                 };
 
+                // Process added members (names)
+                if (tripData.members && Array.isArray(tripData.members)) {
+                    tripData.members.forEach(memberName => {
+                        if (memberName && typeof memberName === 'string' && memberName.trim() !== '') {
+                            const memId = Date.now().toString() + Math.floor(Math.random() * 1000).toString();
+                            newTrip.members.push(memId);
+                            newTrip.memberDetails[memId] = {
+                                name: memberName.trim(),
+                                role: 'member',
+                                joinedAt: new Date().toISOString()
+                            };
+                        }
+                    });
+                }
+
                 const updatedTrips = [...trips, newTrip];
                 setTrips(updatedTrips);
                 setCurrentTrip(newTrip);

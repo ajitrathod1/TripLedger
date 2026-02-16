@@ -47,7 +47,15 @@ const CreateTripScreen = ({ route }) => {
             setDestination(t.destination);
             setBudget(t.totalBudget ? t.totalBudget.toString() : '');
             setCoverImage(t.coverImage);
-            setMembers(t.members && t.members.length > 0 ? t.members : ['']);
+            const memberNames = (t.members && t.memberDetails)
+                ? t.members.filter(id => t.memberDetails[id])
+                    .map(id => t.memberDetails[id].name)
+                    .filter(name => name !== 'You' && name !== (t.ownerName || '')) // Filter out owner if needed, but 'You' logic depends on auth
+                : [''];
+
+            // Just show empty for now to avoid ID confusion, or show names if available
+            // Better to NOT show members in Edit mode to avoid breaking IDs
+            setMembers([]);
         } else {
             resetForm();
         }
@@ -86,19 +94,23 @@ const CreateTripScreen = ({ route }) => {
             return;
         }
 
-        const validMembers = members.filter(m => m.trim() !== '');
-        if (validMembers.length === 0) {
-            Alert.alert('Members Missing', 'Please add at least one traveler.');
-            return;
+        let validMembers = [];
+        if (!tripToEdit) {
+            validMembers = members.filter(m => m.trim() !== '');
+            // For new trips, we want at least one member (or maybe just the owner is fine?)
+            // If the user adds no one, it's a solo trip.
         }
 
         const tripData = {
             name: tripName,
             destination,
             totalBudget: parseFloat(budget),
-            members: validMembers,
             coverImage: coverImage || PRESET_COVERS[0]
         };
+
+        if (!tripToEdit) {
+            tripData.members = validMembers;
+        }
 
         if (tripToEdit) {
             updateTrip(tripToEdit.id, tripData);
@@ -187,34 +199,45 @@ const CreateTripScreen = ({ route }) => {
                     />
 
                     {/* Dynamic Members Section */}
-                    <View style={styles.membersHeader}>
-                        <Text style={styles.label}>Who's Coming?</Text>
-                        <TouchableOpacity onPress={handleAddMember} style={styles.addMemberBtn}>
-                            <Ionicons name="add" size={16} color="#fff" />
-                            <Text style={styles.addMemberText}>Add</Text>
-                        </TouchableOpacity>
-                    </View>
-
-                    {members.map((member, index) => (
-                        <View key={index} style={styles.memberRow}>
-                            <View style={{ flex: 1 }}>
-                                <CustomInput
-                                    placeholder={`Traveler ${index + 1} Name`}
-                                    value={member}
-                                    onChangeText={(text) => handleMemberNameChange(text, index)}
-                                    icon="person-outline"
-                                    inputContainerStyle={styles.transparentInput}
-                                    style={{ color: '#fff' }}
-                                    placeholderTextColor="rgba(255,255,255,0.4)"
-                                />
-                            </View>
-                            {index > 0 && (
-                                <TouchableOpacity onPress={() => handleRemoveMember(index)} style={styles.removeMemberBtn}>
-                                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                                </TouchableOpacity>
-                            )}
+                    {tripToEdit ? (
+                        <View style={styles.membersHeader}>
+                            <Text style={styles.label}>Members</Text>
+                            <Text style={{ color: '#94A3B8', fontSize: 12, fontStyle: 'italic' }}>
+                                Member management is available in Trip Settings.
+                            </Text>
                         </View>
-                    ))}
+                    ) : (
+                        <>
+                            <View style={styles.membersHeader}>
+                                <Text style={styles.label}>Who's Coming?</Text>
+                                <TouchableOpacity onPress={handleAddMember} style={styles.addMemberBtn}>
+                                    <Ionicons name="add" size={16} color="#fff" />
+                                    <Text style={styles.addMemberText}>Add</Text>
+                                </TouchableOpacity>
+                            </View>
+
+                            {members.map((member, index) => (
+                                <View key={index} style={styles.memberRow}>
+                                    <View style={{ flex: 1 }}>
+                                        <CustomInput
+                                            placeholder={`Traveler ${index + 1} Name`}
+                                            value={member}
+                                            onChangeText={(text) => handleMemberNameChange(text, index)}
+                                            icon="person-outline"
+                                            inputContainerStyle={styles.transparentInput}
+                                            style={{ color: '#fff' }}
+                                            placeholderTextColor="rgba(255,255,255,0.4)"
+                                        />
+                                    </View>
+                                    {index > 0 && (
+                                        <TouchableOpacity onPress={() => handleRemoveMember(index)} style={styles.removeMemberBtn}>
+                                            <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                            ))}
+                        </>
+                    )}
 
                     <CustomButton
                         title={tripToEdit ? "Update Trip" : "Let's Go!"}

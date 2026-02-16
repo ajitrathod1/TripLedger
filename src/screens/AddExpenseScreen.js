@@ -25,6 +25,7 @@ const AddExpenseScreen = () => {
     const [category, setCategory] = useState(expenseToEdit?.category || 'Food');
     const [paidBy, setPaidBy] = useState(expenseToEdit?.paidBy || (currentTrip?.members[0] || ''));
     const [splitBetween, setSplitBetween] = useState(expenseToEdit?.splitBetween || (currentTrip?.members || []));
+    const [isSaving, setIsSaving] = useState(false);
 
     const categories = [
         { name: 'Food', icon: 'restaurant' },
@@ -35,28 +36,46 @@ const AddExpenseScreen = () => {
         { name: 'Other', icon: 'receipt' },
     ];
 
-    const handleSaveExpense = () => {
-        if (!amount || !paidBy) {
-            Alert.alert('Missing Fields', 'Please fill in the amount and who paid.');
+    const handleSaveExpense = async () => {
+        const parsedAmount = parseFloat(amount);
+        if (!amount || isNaN(parsedAmount) || parsedAmount <= 0) {
+            Alert.alert('Invalid Amount', 'Please enter a valid positive number.');
             return;
         }
 
-        const expenseData = {
-            title: title.trim() || 'General Expense',
-            amount: parseFloat(amount),
-            category,
-            paidBy,
-            splitBetween,
-            date: expenseToEdit?.date || new Date().toISOString(),
-        };
-
-        if (expenseToEdit) {
-            editExpense(expenseToEdit.id, expenseData);
-        } else {
-            addExpense(currentTrip.id, { ...expenseData, id: Date.now().toString() });
+        if (!paidBy) {
+            Alert.alert('Missing Fields', 'Please select who paid for this expense.');
+            return;
         }
 
-        navigation.goBack();
+        if (splitBetween.length === 0) {
+            Alert.alert('Invalid Split', 'At least one person must accept the split.');
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const expenseData = {
+                title: title.trim() || 'General Expense',
+                amount: parsedAmount,
+                category,
+                paidBy,
+                splitBetween,
+                date: expenseToEdit?.date || new Date().toISOString(),
+            };
+
+            if (expenseToEdit) {
+                await editExpense(expenseToEdit.id, expenseData);
+            } else {
+                await addExpense({ ...expenseData, id: Date.now().toString() });
+            }
+
+            navigation.goBack();
+        } catch (error) {
+            Alert.alert('Error', error.message || 'Failed to save expense. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const toggleSplitMember = (member) => {
@@ -187,6 +206,7 @@ const AddExpenseScreen = () => {
                         <CustomButton
                             title={expenseToEdit ? 'Save Changes' : 'Add Expense'}
                             onPress={handleSaveExpense}
+                            loading={isSaving}
                             style={styles.saveBtn}
                             textStyle={{ color: '#fff', fontSize: 18 }}
                         />

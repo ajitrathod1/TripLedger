@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Alert, TouchableOpacity, Image, ImageBackground, Dimensions, LayoutAnimation, Platform, UIManager } from 'react-native';
 import CustomInput from '../components/CustomInput';
 import CustomButton from '../components/CustomButton';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useTripContext } from '../context/TripContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -19,54 +19,74 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 const CreateTripScreen = ({ route }) => {
     const navigation = useNavigation();
-    const { addTrip, updateTrip } = useTripContext();
+    const { addTrip, updateTrip, currentTrip } = useTripContext();
     const { theme } = useTheme();
     const styles = getStyles(theme);
 
-    const [tripToEdit, setTripToEdit] = useState(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [tripId, setTripId] = useState(null);
 
     const [tripName, setTripName] = useState('');
     const [destination, setDestination] = useState('');
     const [budget, setBudget] = useState('');
     const [coverImage, setCoverImage] = useState(null);
-    const [members, setMembers] = useState(['']); // Start with one empty member slot
+    const [members, setMembers] = useState(['']);
 
     const PRESET_COVERS = [
-        'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070&auto=format&fit=crop', // Nature
-        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2073&auto=format&fit=crop', // Beach
-        'https://images.unsplash.com/photo-1499856871940-a09627c6d7db?q=80&w=2020&auto=format&fit=crop', // Historic/City
-        'https://images.unsplash.com/photo-1504609773096-104ff100aaa4?q=80&w=2070&auto=format&fit=crop', // Adventure
-        'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=2070&auto=format&fit=crop', // Luxury
+        'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?q=80&w=2070&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=2073&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1499856871940-a09627c6d7db?q=80&w=2020&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1504609773096-104ff100aaa4?q=80&w=2070&auto=format&fit=crop',
+        'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=2070&auto=format&fit=crop',
     ];
 
-    useEffect(() => {
-        if (route.params && route.params.tripToEdit) {
-            const t = route.params.tripToEdit;
-            setTripToEdit(t);
-            setTripName(t.name);
-            setDestination(t.destination);
-            setBudget(t.totalBudget ? t.totalBudget.toString() : '');
-            setCoverImage(t.coverImage);
-            const memberNames = (t.members && t.memberDetails)
-                ? t.members.filter(id => t.memberDetails[id])
-                    .map(id => t.memberDetails[id].name)
-                    .filter(name => name !== 'You' && name !== (t.ownerName || '')) // Filter out owner if needed, but 'You' logic depends on auth
-                : [''];
+    // ✅ FIX: useFocusEffect se form reset hoga jab screen focus ho
+    useFocusEffect(
+        useCallback(() => {
+            if (route.params?.tripToEdit) {
+                loadTripForEdit(route.params.tripToEdit);
+            } else {
+                resetForm();
+            }
+            
+            // Cleanup jab screen unfocus ho
+            return () => {
+                // Agar chaho toh yahan bhi reset kar sakte ho
+            };
+        }, [route.params])
+    );
 
-            // Just show empty for now to avoid ID confusion, or show names if available
-            // Better to NOT show members in Edit mode to avoid breaking IDs
-            setMembers([]);
-        } else {
-            resetForm();
+    const loadTripForEdit = (trip) => {
+        setIsEditing(true);
+        setTripId(trip.id);
+        setTripName(trip.name || '');
+        setDestination(trip.destination || '');
+        setBudget(trip.totalBudget ? trip.totalBudget.toString() : '');
+        setCoverImage(trip.coverImage || PRESET_COVERS[0]);
+
+        // ✅ FIX: Members ko properly load karo
+        let memberNames = [''];
+        if (trip.members && trip.memberDetails) {
+            // Filter out system members like 'You' or owner, get actual names
+            memberNames = trip.members
+                .map(memberId => {
+                    const detail = trip.memberDetails[memberId];
+                    return detail ? detail.name : null;
+                })
+                .filter(name => name && name !== 'You' && name !== trip.ownerName);
         }
-    }, [route.params]);
+        
+        // Agar koi member nahi mila toh ek empty slot do
+        setMembers(memberNames.length > 0 ? memberNames : ['']);
+    };
 
     const resetForm = () => {
-        setTripToEdit(null);
+        setIsEditing(false);
+        setTripId(null);
         setTripName('');
         setDestination('');
         setBudget('');
-        setCoverImage(PRESET_COVERS[0]); // Default to first image
+        setCoverImage(PRESET_COVERS[0]);
         setMembers(['']);
     };
 
@@ -76,6 +96,14 @@ const CreateTripScreen = ({ route }) => {
     };
 
     const handleRemoveMember = (index) => {
+        if (members.length === 1) {
+            // Last member ko clear karo instead of removing
+            const newMembers = [...members];
+            newMembers[0] = '';
+            setMembers(newMembers);
+            return;
+        }
+        
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         const newMembers = [...members];
         newMembers.splice(index, 1);
@@ -88,37 +116,60 @@ const CreateTripScreen = ({ route }) => {
         setMembers(newMembers);
     };
 
-    const handleCreateTrip = () => {
-        if (!tripName || !destination || !budget) {
-            Alert.alert('Missing Fields', 'Please fill all required trip details');
+    // ✅ FIX: Proper validation aur error handling
+    const handleCreateTrip = async () => {
+        // Validation
+        if (!tripName.trim()) {
+            Alert.alert('Missing Fields', 'Please enter a trip name');
+            return;
+        }
+        if (!destination.trim()) {
+            Alert.alert('Missing Fields', 'Please enter a destination');
+            return;
+        }
+        if (!budget.trim() || isNaN(parseFloat(budget))) {
+            Alert.alert('Invalid Budget', 'Please enter a valid budget amount');
             return;
         }
 
-        let validMembers = [];
-        if (!tripToEdit) {
-            validMembers = members.filter(m => m.trim() !== '');
-            // For new trips, we want at least one member (or maybe just the owner is fine?)
-            // If the user adds no one, it's a solo trip.
-        }
+        // Members process karo (empty ones hatao)
+        const validMembers = members.filter(m => m.trim() !== '');
 
         const tripData = {
-            name: tripName,
-            destination,
+            name: tripName.trim(),
+            destination: destination.trim(),
             totalBudget: parseFloat(budget),
-            coverImage: coverImage || PRESET_COVERS[0]
+            coverImage: coverImage || PRESET_COVERS[0],
         };
 
-        if (!tripToEdit) {
+        // ✅ FIX: Edit mode mein bhi members bhejo agar change kiye ho
+        // Note: Backend mein member update logic handle karna padega
+        if (validMembers.length > 0) {
             tripData.members = validMembers;
         }
 
-        if (tripToEdit) {
-            updateTrip(tripToEdit.id, tripData);
-            Alert.alert("Success", "Trip updated successfully!");
-        } else {
-            addTrip(tripData);
+        try {
+            if (isEditing && tripId) {
+                // Update existing trip
+                await updateTrip(tripId, tripData);
+                Alert.alert("Success", "Trip updated successfully!");
+            } else {
+                // Create new trip
+                if (validMembers.length > 0) {
+                    tripData.members = validMembers;
+                }
+                await addTrip(tripData);
+                Alert.alert("Success", "Trip created successfully!");
+            }
+            
+            // ✅ FIX: Form reset karo aur back jao
+            resetForm();
+            navigation.goBack();
+            
+        } catch (error) {
+            console.error("Trip save error:", error);
+            Alert.alert("Error", error.message || "Failed to save trip");
         }
-        navigation.goBack();
     };
 
     return (
@@ -132,7 +183,7 @@ const CreateTripScreen = ({ route }) => {
                             <Ionicons name="arrow-back" size={24} color="#fff" />
                         </View>
                     </TouchableOpacity>
-                    <Text style={styles.screenTitle}>{tripToEdit ? 'Edit Trip' : 'Plan a New Trip'}</Text>
+                    <Text style={styles.screenTitle}>{isEditing ? 'Edit Trip' : 'Plan a New Trip'}</Text>
                     <View style={{ width: 44 }} />
                 </View>
 
@@ -165,7 +216,7 @@ const CreateTripScreen = ({ route }) => {
 
                     {/* Input Fields */}
                     <CustomInput
-                        label="Trip Name"
+                        label="Trip Name *"
                         placeholder="e.g. Summer in Goa"
                         value={tripName}
                         onChangeText={setTripName}
@@ -175,7 +226,7 @@ const CreateTripScreen = ({ route }) => {
                         labelStyle={{ color: '#94A3B8' }}
                     />
                     <CustomInput
-                        label="Destination"
+                        label="Destination *"
                         placeholder="Where are you going?"
                         value={destination}
                         onChangeText={setDestination}
@@ -186,7 +237,7 @@ const CreateTripScreen = ({ route }) => {
                         labelStyle={{ color: '#94A3B8' }}
                     />
                     <CustomInput
-                        label="Total Budget"
+                        label="Total Budget *"
                         placeholder="₹ 50,000"
                         value={budget}
                         onChangeText={setBudget}
@@ -199,52 +250,68 @@ const CreateTripScreen = ({ route }) => {
                     />
 
                     {/* Dynamic Members Section */}
-                    {tripToEdit ? (
-                        <View style={styles.membersHeader}>
-                            <Text style={styles.label}>Members</Text>
-                            <Text style={{ color: '#94A3B8', fontSize: 12, fontStyle: 'italic' }}>
-                                Member management is available in Trip Settings.
+                    <View style={styles.membersHeader}>
+                        <View>
+                            <Text style={styles.label}>
+                                {isEditing ? 'Update Members' : "Who's Coming?"}
                             </Text>
+                            {isEditing && (
+                                <Text style={styles.hintText}>
+                                    Add new members (existing will be kept)
+                                </Text>
+                            )}
                         </View>
-                    ) : (
-                        <>
-                            <View style={styles.membersHeader}>
-                                <Text style={styles.label}>Who's Coming?</Text>
-                                <TouchableOpacity onPress={handleAddMember} style={styles.addMemberBtn}>
-                                    <Ionicons name="add" size={16} color="#fff" />
-                                    <Text style={styles.addMemberText}>Add</Text>
-                                </TouchableOpacity>
-                            </View>
+                        <TouchableOpacity onPress={handleAddMember} style={styles.addMemberBtn}>
+                            <Ionicons name="add" size={16} color="#fff" />
+                            <Text style={styles.addMemberText}>Add</Text>
+                        </TouchableOpacity>
+                    </View>
 
-                            {members.map((member, index) => (
-                                <View key={index} style={styles.memberRow}>
-                                    <View style={{ flex: 1 }}>
-                                        <CustomInput
-                                            placeholder={`Traveler ${index + 1} Name`}
-                                            value={member}
-                                            onChangeText={(text) => handleMemberNameChange(text, index)}
-                                            icon="person-outline"
-                                            inputContainerStyle={styles.transparentInput}
-                                            style={{ color: '#fff' }}
-                                            placeholderTextColor="rgba(255,255,255,0.4)"
-                                        />
-                                    </View>
-                                    {index > 0 && (
-                                        <TouchableOpacity onPress={() => handleRemoveMember(index)} style={styles.removeMemberBtn}>
-                                            <Ionicons name="trash-outline" size={20} color="#EF4444" />
-                                        </TouchableOpacity>
-                                    )}
-                                </View>
-                            ))}
-                        </>
-                    )}
+                    {members.map((member, index) => (
+                        <View key={index} style={styles.memberRow}>
+                            <View style={{ flex: 1 }}>
+                                <CustomInput
+                                    placeholder={`Traveler ${index + 1} Name`}
+                                    value={member}
+                                    onChangeText={(text) => handleMemberNameChange(text, index)}
+                                    icon="person-outline"
+                                    inputContainerStyle={styles.transparentInput}
+                                    style={{ color: '#fff' }}
+                                    placeholderTextColor="rgba(255,255,255,0.4)"
+                                />
+                            </View>
+                            <TouchableOpacity 
+                                onPress={() => handleRemoveMember(index)} 
+                                style={styles.removeMemberBtn}
+                            >
+                                <Ionicons 
+                                    name={members.length === 1 && !member ? "close-outline" : "trash-outline"} 
+                                    size={20} 
+                                    color="#EF4444" 
+                                />
+                            </TouchableOpacity>
+                        </View>
+                    ))}
 
                     <CustomButton
-                        title={tripToEdit ? "Update Trip" : "Let's Go!"}
+                        title={isEditing ? "Update Trip" : "Let's Go!"}
                         onPress={handleCreateTrip}
                         style={styles.createButton}
                         textStyle={{ color: '#fff', fontSize: 18 }}
                     />
+
+                    {/* Cancel button for edit mode */}
+                    {isEditing && (
+                        <TouchableOpacity 
+                            onPress={() => {
+                                resetForm();
+                                navigation.goBack();
+                            }}
+                            style={styles.cancelButton}
+                        >
+                            <Text style={styles.cancelText}>Cancel</Text>
+                        </TouchableOpacity>
+                    )}
 
                 </View>
             </ScrollView>
@@ -253,12 +320,6 @@ const CreateTripScreen = ({ route }) => {
 };
 
 const getStyles = (theme) => StyleSheet.create({
-    orb: {
-        position: 'absolute',
-        width: 300,
-        height: 300,
-        borderRadius: 150,
-    },
     scrollContent: {
         padding: 20,
         paddingTop: 60,
@@ -297,7 +358,7 @@ const getStyles = (theme) => StyleSheet.create({
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
-        backgroundColor: 'rgba(15, 23, 42, 0.5)', // Fallback
+        backgroundColor: 'rgba(15, 23, 42, 0.5)',
     },
     label: {
         color: '#94A3B8',
@@ -305,6 +366,13 @@ const getStyles = (theme) => StyleSheet.create({
         fontFamily: 'Outfit-Bold',
         marginBottom: 12,
         marginTop: 5,
+    },
+    hintText: {
+        color: 'rgba(148, 163, 184, 0.7)',
+        fontSize: 12,
+        fontFamily: 'Outfit-Regular',
+        marginTop: -8,
+        marginBottom: 8,
     },
     coverScroll: {
         marginBottom: 20,
@@ -341,7 +409,7 @@ const getStyles = (theme) => StyleSheet.create({
     membersHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         marginTop: 10,
         marginBottom: 10,
     },
@@ -382,6 +450,16 @@ const getStyles = (theme) => StyleSheet.create({
         shadowOpacity: 0.4,
         shadowRadius: 15,
         elevation: 5,
+    },
+    cancelButton: {
+        marginTop: 15,
+        alignSelf: 'center',
+        padding: 10,
+    },
+    cancelText: {
+        color: '#94A3B8',
+        fontFamily: 'Outfit-Medium',
+        fontSize: 16,
     }
 });
 

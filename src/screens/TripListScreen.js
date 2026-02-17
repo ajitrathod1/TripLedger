@@ -21,7 +21,6 @@ const getTripImage = (id) => {
         'https://images.unsplash.com/photo-1504609773096-104ff100aaa4?q=80&w=2070&auto=format&fit=crop',
         'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?q=80&w=2070&auto=format&fit=crop',
     ];
-    // Simple hash
     let hash = 0;
     if (id) {
         const str = id.toString();
@@ -35,7 +34,8 @@ const getTripImage = (id) => {
 
 const TripListScreen = ({ navigation }) => {
     const { theme } = useTheme();
-    const { trips, deleteTrip } = useTripContext();
+    // ✅ FIX: updateTrip bhi import karo context se
+    const { trips, deleteTrip, updateTrip } = useTripContext();
     const { user } = useAuth();
     const styles = getStyles(theme);
 
@@ -49,73 +49,121 @@ const TripListScreen = ({ navigation }) => {
         }).start();
     }, []);
 
-    const handleDelete = (trip) => {
+    // ✅ FIX: Proper delete with confirmation
+    const handleDelete = (tripId) => {
         Alert.alert(
             "Delete Trip",
-            `Are you sure you want to delete "${trip.name}"?`,
+            "Are you sure you want to delete this trip? This action cannot be undone.",
             [
                 { text: "Cancel", style: "cancel" },
                 {
                     text: "Delete",
                     style: "destructive",
-                    onPress: () => deleteTrip(trip.id)
+                    onPress: async () => {
+                        try {
+                            await deleteTrip(tripId);
+                            // Optional: Show success toast
+                        } catch (error) {
+                            Alert.alert("Error", "Failed to delete trip");
+                        }
+                    }
+                }
+            ]
+        );
+    };
+
+    // ✅ FIX: Edit handler with navigation
+    const handleEdit = (trip) => {
+        navigation.navigate('CreateTrip', {
+            tripToEdit: trip,
+            isEditing: true // Flag bhejo agar chahiye
+        });
+    };
+
+    const handleLongPress = (trip) => {
+        Alert.alert(
+            "Trip Options",
+            `What do you want to do with "${trip.name}"?`,
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Edit Trip",
+                    onPress: () => handleEdit(trip)
+                },
+                {
+                    text: "Delete",
+                    style: "destructive",
+                    onPress: () => handleDelete(trip.id)
                 }
             ]
         );
     };
 
     const renderTripCard = ({ item }) => {
-        // Calculate Total Spent for this Trip
         const tripSpent = item.expenses?.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0) || 0;
 
         return (
-            <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={() => navigation.navigate('TripSummary', { tripId: item.id })}
-                onLongPress={() => handleDelete(item)}
-                style={styles.tripCardContainer}
-            >
-                <ImageBackground
-                    source={{ uri: getTripImage(item.id) }}
-                    style={styles.tripCardImage}
-                    imageStyle={{ borderRadius: 24 }}
+            <View style={styles.tripCardContainer}>
+                <TouchableOpacity
+                    activeOpacity={0.9}
+                    onPress={() => navigation.navigate('TripSummary', { tripId: item.id })}
+                    onLongPress={() => handleLongPress(item)}
+                    style={styles.cardTouchable}
                 >
-                    <LinearGradient
-                        colors={['transparent', 'rgba(0,0,0,0.8)']}
-                        style={styles.cardGradient}
+                    <ImageBackground
+                        source={{ uri: getTripImage(item.id) }}
+                        style={styles.tripCardImage}
+                        imageStyle={{ borderRadius: 24 }}
                     >
-                        <View style={styles.cardContent}>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-                                <View style={styles.cardBadge}>
-                                    <Text style={styles.cardBadgeText}>Active</Text>
+                        <LinearGradient
+                            colors={['transparent', 'rgba(0,0,0,0.8)']}
+                            style={styles.cardGradient}
+                        >
+                            <View style={styles.cardContent}>
+                                <View style={styles.cardHeaderRow}>
+                                    <View style={styles.badgesContainer}>
+                                        <View style={styles.cardBadge}>
+                                            <Text style={styles.cardBadgeText}>Active</Text>
+                                        </View>
+                                        <View style={styles.expenseBadge}>
+                                            <Text style={styles.expenseBadgeText}>₹{tripSpent.toLocaleString()}</Text>
+                                        </View>
+                                    </View>
                                 </View>
-                                {/* NEW: Expense Display on Card */}
-                                <View style={styles.expenseBadge}>
-                                    <Text style={styles.expenseBadgeText}>₹{tripSpent.toLocaleString()}</Text>
+
+                                <Text style={styles.tripTitle}>{item.name}</Text>
+                                <Text style={styles.tripDate}>
+                                    <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.8)" /> {new Date(parseInt(item.id)).toLocaleDateString()}
+                                </Text>
+
+                                <View style={styles.membersRow}>
+                                    {item.members?.slice(0, 3).map((m, i) => (
+                                        <View key={i} style={[styles.memberDot, { zIndex: 3 - i, marginLeft: i > 0 ? -10 : 0 }]}>
+                                            <Text style={styles.memberInitial}>{m.charAt(0).toUpperCase()}</Text>
+                                        </View>
+                                    ))}
+                                    {(item.members?.length > 3) && (
+                                        <View style={[styles.memberDot, { zIndex: 0, marginLeft: -10, backgroundColor: theme.primary }]}>
+                                            <Text style={styles.memberInitial}>+{item.members.length - 3}</Text>
+                                        </View>
+                                    )}
                                 </View>
                             </View>
+                        </LinearGradient>
+                    </ImageBackground>
+                </TouchableOpacity>
 
-                            <Text style={styles.tripTitle}>{item.name}</Text>
-                            <Text style={styles.tripDate}>
-                                <Ionicons name="calendar-outline" size={14} color="rgba(255,255,255,0.8)" /> {new Date(parseInt(item.id)).toLocaleDateString()}
-                            </Text>
-
-                            <View style={styles.membersRow}>
-                                {item.members?.slice(0, 3).map((m, i) => (
-                                    <View key={i} style={[styles.memberDot, { zIndex: 3 - i, marginLeft: i > 0 ? -10 : 0 }]}>
-                                        <Text style={styles.memberInitial}>{m.charAt(0).toUpperCase()}</Text>
-                                    </View>
-                                ))}
-                                {(item.members?.length > 3) && (
-                                    <View style={[styles.memberDot, { zIndex: 0, marginLeft: -10, backgroundColor: theme.primary }]}>
-                                        <Text style={styles.memberInitial}>+{item.members.length - 3}</Text>
-                                    </View>
-                                )}
-                            </View>
-                        </View>
-                    </LinearGradient>
-                </ImageBackground>
-            </TouchableOpacity>
+                {/* Menu Button */}
+                {/* Menu Button - Explicitly placed last with high elevation */}
+                <TouchableOpacity
+                    onPress={() => handleLongPress(item)}
+                    style={[styles.menuButton, { zIndex: 9999, elevation: 100 }]} // Force top layer
+                    hitSlop={{ top: 20, bottom: 20, left: 20, right: 20 }}
+                    activeOpacity={0.6}
+                >
+                    <Ionicons name="ellipsis-horizontal" size={24} color="#fff" />
+                </TouchableOpacity>
+            </View>
         );
     };
 
@@ -137,7 +185,6 @@ const TripListScreen = ({ navigation }) => {
 
     return (
         <ThemedBackground>
-            {/* Header */}
             <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
                 <View>
                     <Text style={styles.greeting}>Hello, {user?.displayName?.split(' ')[0] || 'Traveler'} 👋</Text>
@@ -154,8 +201,6 @@ const TripListScreen = ({ navigation }) => {
             </Animated.View>
 
             <ScrollView contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
-
-                {/* Active Trips Section */}
                 <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Your Adventures</Text>
                     {trips.length > 0 && <TouchableOpacity><Text style={styles.seeAll}>See All</Text></TouchableOpacity>}
@@ -169,19 +214,17 @@ const TripListScreen = ({ navigation }) => {
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
-                        snapToInterval={width * 0.75 + 20}
+                        snapToInterval={width * 0.65 + 20}
                         decelerationRate="fast"
                     />
                 )}
 
-                {/* Quick Insights (Reduced) */}
                 {trips.length > 0 && (
                     <Animated.View style={{ opacity: fadeAnim }}>
                         <View style={styles.sectionHeader}>
                             <Text style={styles.sectionTitle}>Quick Insights</Text>
                         </View>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20 }}>
-                            {/* Analytics Shortcut */}
                             <TouchableOpacity style={styles.quickActionCard}>
                                 <LinearGradient
                                     colors={['rgba(251, 191, 36, 0.2)', 'rgba(251, 191, 36, 0.05)']}
@@ -198,9 +241,6 @@ const TripListScreen = ({ navigation }) => {
                                 </View>
                             </TouchableOpacity>
 
-                            {/* REMOVED 'Remaining' Card as requested */}
-
-                            {/* Converter Shortcut */}
                             <TouchableOpacity style={styles.quickActionCard}>
                                 <LinearGradient
                                     colors={['rgba(167, 139, 250, 0.2)', 'rgba(167, 139, 250, 0.05)']}
@@ -219,18 +259,19 @@ const TripListScreen = ({ navigation }) => {
                 )}
             </ScrollView>
 
-            {/* Floating Action Button */}
             <TouchableOpacity
                 style={styles.fab}
                 onPress={() => navigation.navigate('CreateTrip')}
                 activeOpacity={0.8}
             >
-                <View style={styles.fabGlass}>
-                    <View style={styles.fabIconContainer}>
-                        <Ionicons name="add" size={28} color="#fff" />
-                    </View>
-                    <Text style={styles.fabText}>New Trip</Text>
-                </View>
+                <LinearGradient
+                    colors={['#38BDF8', '#0EA5E9']}
+                    style={styles.fabGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                >
+                    <Ionicons name="add" size={32} color="#fff" />
+                </LinearGradient>
             </TouchableOpacity>
         </ThemedBackground>
     );
@@ -296,21 +337,24 @@ const getStyles = (theme) => StyleSheet.create({
         fontFamily: 'Outfit-Medium',
     },
     tripCardContainer: {
-        width: width * 0.75,
-        height: 400,
+        width: width * 0.65,
+        height: 320,
         marginRight: 20,
+        position: 'relative',
+    },
+    cardTouchable: {
+        flex: 1,
         borderRadius: 24,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 10 },
         shadowOpacity: 0.3,
         shadowRadius: 20,
         elevation: 10,
+        overflow: 'hidden',
     },
     tripCardImage: {
         width: '100%',
         height: '100%',
-        borderRadius: 24,
-        overflow: 'hidden',
     },
     cardGradient: {
         flex: 1,
@@ -318,10 +362,35 @@ const getStyles = (theme) => StyleSheet.create({
         padding: 20,
     },
     cardContent: {
-
+        justifyContent: 'flex-end',
+    },
+    cardHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 10,
+    },
+    badgesContainer: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    menuButton: {
+        position: 'absolute',
+        top: 20,
+        right: 20,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 100,
+        elevation: 50,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.3)',
     },
     cardBadge: {
-        backgroundColor: 'rgba(56, 189, 248, 0.2)', // Cyan tint
+        backgroundColor: 'rgba(56, 189, 248, 0.2)',
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 12,
@@ -334,9 +403,8 @@ const getStyles = (theme) => StyleSheet.create({
         fontSize: 12,
         fontFamily: 'Outfit-Bold',
     },
-    // New Expense Badge
     expenseBadge: {
-        backgroundColor: 'rgba(16, 185, 129, 0.2)', // Green tint
+        backgroundColor: 'rgba(16, 185, 129, 0.2)',
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 12,
@@ -345,12 +413,12 @@ const getStyles = (theme) => StyleSheet.create({
         borderColor: 'rgba(16, 185, 129, 0.4)',
     },
     expenseBadgeText: {
-        color: '#6EE7B7', // Light Green
+        color: '#6EE7B7',
         fontSize: 12,
         fontFamily: 'Outfit-Bold',
     },
     tripTitle: {
-        fontSize: 28,
+        fontSize: 24,
         fontFamily: 'Outfit-Bold',
         color: '#fff',
         marginBottom: 5,
@@ -402,7 +470,7 @@ const getStyles = (theme) => StyleSheet.create({
         paddingRight: 20,
     },
     quickActionCard: {
-        width: 140, // Wider for text
+        width: 140,
         height: 110,
         backgroundColor: 'rgba(30, 41, 59, 0.7)',
         borderRadius: 24,
@@ -419,7 +487,7 @@ const getStyles = (theme) => StyleSheet.create({
         borderRadius: 12,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'rgba(255,255,255,0.1)', // Fallback
+        backgroundColor: 'rgba(255,255,255,0.1)',
     },
     qaContent: {
         marginTop: 10,
@@ -439,36 +507,23 @@ const getStyles = (theme) => StyleSheet.create({
     fab: {
         position: 'absolute',
         bottom: 30,
+        right: undefined,
         alignSelf: 'center',
         shadowColor: "#38BDF8",
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.4,
-        shadowRadius: 15,
-        elevation: 10,
+        shadowOpacity: 0.5,
+        shadowRadius: 16,
+        elevation: 12,
+        borderRadius: 35,
     },
-    fabGlass: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 8,
-        paddingRight: 20,
-        backgroundColor: theme.type === 'dark' ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.95)',
-        borderWidth: 1,
-        borderColor: 'rgba(56, 189, 248, 0.3)',
-        borderRadius: 30,
-    },
-    fabIconContainer: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: '#38BDF8',
+    fabGradient: {
+        width: 70,
+        height: 70,
+        borderRadius: 35,
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
-    },
-    fabText: {
-        color: '#fff',
-        fontSize: 16,
-        fontFamily: 'Outfit-Bold',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
     }
 });
 

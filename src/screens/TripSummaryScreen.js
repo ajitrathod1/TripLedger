@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator, Alert, Animated, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Dimensions, TouchableOpacity, ActivityIndicator, Alert, Animated, ImageBackground, Platform } from 'react-native';
 // Removed unused imports
 import SkeletonLoader from '../components/SkeletonLoader';
 import { useTripContext } from '../context/TripContext';
@@ -10,6 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import ThemedBackground from '../components/ThemedBackground';
 import { useTheme } from '../context/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 const screenWidth = Dimensions.get('window').width;
@@ -38,7 +39,8 @@ const TripSummaryScreen = () => {
     const { currentTrip, loading, deleteTrip, deleteExpense } = useTripContext();
     const navigation = useNavigation();
     const { theme } = useTheme();
-    const styles = getStyles(theme);
+    const insets = useSafeAreaInsets();
+    const styles = getStyles(theme, insets);
 
     // Animation Values
     const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -253,12 +255,21 @@ const TripSummaryScreen = () => {
 
                         {/* Recent Transactions Header */}
                         <View style={styles.sectionHeader}>
-                            <Text style={styles.sectionTitle}>Recent Transactions</Text>
-                            {expenses.length > 3 && (
-                                <TouchableOpacity onPress={() => setShowAllExpenses(!showAllExpenses)}>
-                                    <Text style={styles.viewAll}>{showAllExpenses ? 'Show Less' : 'View All'}</Text>
-                                </TouchableOpacity>
-                            )}
+                            <Text style={styles.sectionTitle}>
+                                {showAllExpenses ? 'All Transactions' : 'Recent Transactions'}
+                            </Text>
+                            
+                        </View>
+                        {/* Floating Action Button */}
+                        <View style={styles.fabContainer}>
+                            <TouchableOpacity
+                                style={styles.fabButton}
+                                onPress={() => navigation.navigate('AddExpense')}
+                                activeOpacity={0.8}
+                            >
+                                <Ionicons name="add" size={24} color="#fff" />
+                                <Text style={styles.fabText}>Add Expense</Text>
+                            </TouchableOpacity>
                         </View>
 
                         {/* Expense List */}
@@ -269,7 +280,7 @@ const TripSummaryScreen = () => {
                             </View>
                         ) : (
                             // Show all or just top 3
-                            (showAllExpenses ? expenses : expenses.slice(0, 3)).map((expense, index) => {
+                            (showAllExpenses ? expenses : expenses.slice(0, 3)).sort((a, b) => new Date(b.date) - new Date(a.date)).map((expense, index) => {
                                 const inputRange = [-1, 0, (index * 70), (index + 2) * 70];
                                 const scale = scrollY.interpolate({
                                     inputRange,
@@ -313,23 +324,13 @@ const TripSummaryScreen = () => {
                 </View>
             </Animated.ScrollView>
 
-            {/* Floating Action Button */}
-            <View style={styles.fabContainer}>
-                <TouchableOpacity
-                    style={styles.fabButton}
-                    onPress={() => navigation.navigate('AddExpense')}
-                    activeOpacity={0.8}
-                >
-                    <Ionicons name="add" size={24} color="#fff" />
-                    <Text style={styles.fabText}>Add Expense</Text>
-                </TouchableOpacity>
-            </View>
+
 
         </ThemedBackground>
     );
 };
 
-const getStyles = (theme) => StyleSheet.create({
+const getStyles = (theme, insets) => StyleSheet.create({
     headerImage: {
         width: '100%',
         height: 280,
@@ -557,28 +558,27 @@ const getStyles = (theme) => StyleSheet.create({
     },
     fabContainer: {
         position: 'absolute',
-        bottom: 40, // Raised slightly
+        bottom: 30,
         left: 0,
         right: 0,
         alignItems: 'center',
         justifyContent: 'center',
-        zIndex: 100,
+        zIndex: 9999,
+        elevation: 20,
     },
     fabButton: {
-        flexDirection: 'row', // Row for Icon + Text
+        flexDirection: 'row',
         paddingHorizontal: 24,
         paddingVertical: 16,
         borderRadius: 32,
         backgroundColor: '#38BDF8',
         alignItems: 'center',
         justifyContent: 'center',
-        shadowColor: "#38BDF8",
-        shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.4,
-        shadowRadius: 12,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4.65,
         elevation: 8,
-        borderWidth: 2,
-        borderColor: 'rgba(255,255,255,0.2)',
     },
     fabText: {
         color: '#fff',

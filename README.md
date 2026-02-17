@@ -5,8 +5,9 @@
 ## Features ✨
 
 ### Core Features
-- **Create Trips**: Set destinations, dates, and budgets
+- **Create & Edit Trips**: Set destinations, dates, budgets, and update them anytime
 - **Track Expenses**: Log expenses in categories like Food, Travel, Stay
+- **View All Transactions**: See a complete history of all trip expenses sorted by date
 - **Smart Settle Up**: Uses an optimized algorithm to minimize the number of transactions required to settle debts
 - **Visual Charts**: See where your money is going with intuitive pie charts
 - **Multi-Member Support**: Add friends and family to your trips

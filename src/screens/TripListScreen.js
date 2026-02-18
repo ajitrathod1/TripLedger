@@ -9,6 +9,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import CustomButton from '../components/CustomButton';
 import ThemedBackground from '../components/ThemedBackground';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -37,7 +38,8 @@ const TripListScreen = ({ navigation }) => {
     // ✅ FIX: updateTrip bhi import karo context se
     const { trips, deleteTrip, updateTrip } = useTripContext();
     const { user } = useAuth();
-    const styles = getStyles(theme);
+    const insets = useSafeAreaInsets();
+    const styles = getStyles(theme, insets);
 
     const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -277,7 +279,7 @@ const TripListScreen = ({ navigation }) => {
     );
 };
 
-const getStyles = (theme) => StyleSheet.create({
+const getStyles = (theme, insets) => StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: theme.background,
@@ -291,7 +293,7 @@ const getStyles = (theme) => StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 24,
-        paddingTop: 60,
+        paddingTop: (insets?.top || 20) + 20,
         paddingBottom: 20,
     },
     greeting: {

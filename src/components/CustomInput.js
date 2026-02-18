@@ -72,6 +72,8 @@ const getStyles = (theme) => StyleSheet.create({
         color: theme.text,
         fontFamily: 'Outfit-Regular',
         height: '100%',
+        includeFontPadding: false,
+        textAlignVertical: 'center',
     },
     multiline: {
         height: 100,

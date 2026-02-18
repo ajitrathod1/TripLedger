@@ -10,6 +10,8 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import ThemedBackground from '../components/ThemedBackground';
 import { StatusBar } from 'expo-status-bar';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 
 const { width, height } = Dimensions.get('window');
 
@@ -21,7 +23,8 @@ const CreateTripScreen = ({ route }) => {
     const navigation = useNavigation();
     const { addTrip, updateTrip, currentTrip } = useTripContext();
     const { theme } = useTheme();
-    const styles = getStyles(theme);
+    const insets = useSafeAreaInsets();
+    const styles = getStyles(theme, insets);
 
     const [isEditing, setIsEditing] = useState(false);
     const [tripId, setTripId] = useState(null);
@@ -48,7 +51,7 @@ const CreateTripScreen = ({ route }) => {
             } else {
                 resetForm();
             }
-            
+
             // Cleanup jab screen unfocus ho
             return () => {
                 // Agar chaho toh yahan bhi reset kar sakte ho
@@ -75,7 +78,7 @@ const CreateTripScreen = ({ route }) => {
                 })
                 .filter(name => name && name !== 'You' && name !== trip.ownerName);
         }
-        
+
         // Agar koi member nahi mila toh ek empty slot do
         setMembers(memberNames.length > 0 ? memberNames : ['']);
     };
@@ -103,7 +106,7 @@ const CreateTripScreen = ({ route }) => {
             setMembers(newMembers);
             return;
         }
-        
+
         LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
         const newMembers = [...members];
         newMembers.splice(index, 1);
@@ -114,6 +117,19 @@ const CreateTripScreen = ({ route }) => {
         const newMembers = [...members];
         newMembers[index] = text;
         setMembers(newMembers);
+    };
+
+    const pickImage = async () => {
+        let result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 0.5,
+        });
+
+        if (!result.canceled) {
+            setCoverImage(result.assets[0].uri);
+        }
     };
 
     // ✅ FIX: Proper validation aur error handling
@@ -161,11 +177,11 @@ const CreateTripScreen = ({ route }) => {
                 await addTrip(tripData);
                 Alert.alert("Success", "Trip created successfully!");
             }
-            
+
             // ✅ FIX: Form reset karo aur back jao
             resetForm();
             navigation.goBack();
-            
+
         } catch (error) {
             console.error("Trip save error:", error);
             Alert.alert("Error", error.message || "Failed to save trip");
@@ -174,18 +190,18 @@ const CreateTripScreen = ({ route }) => {
 
     return (
         <ThemedBackground>
-            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            {/* Header - Fixed at top */}
+            <View style={styles.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+                    <View style={styles.backButtonGlass}>
+                        <Ionicons name="arrow-back" size={24} color="#fff" />
+                    </View>
+                </TouchableOpacity>
+                <Text style={styles.screenTitle}>{isEditing ? 'Edit Trip' : 'Plan a New Trip'}</Text>
+                <View style={{ width: 44 }} />
+            </View>
 
-                {/* Header */}
-                <View style={styles.header}>
-                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-                        <View style={styles.backButtonGlass}>
-                            <Ionicons name="arrow-back" size={24} color="#fff" />
-                        </View>
-                    </TouchableOpacity>
-                    <Text style={styles.screenTitle}>{isEditing ? 'Edit Trip' : 'Plan a New Trip'}</Text>
-                    <View style={{ width: 44 }} />
-                </View>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
                 {/* Main Glass Form */}
                 <View style={styles.glassForm}>
@@ -193,10 +209,19 @@ const CreateTripScreen = ({ route }) => {
                         colors={['rgba(30, 41, 59, 0.7)', 'rgba(30, 41, 59, 0.4)']}
                         style={StyleSheet.absoluteFill}
                     />
-
                     {/* Cover Image Selector */}
                     <Text style={styles.label}>Choose a Vibe</Text>
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.coverScroll}>
+                        {/* Gallery Option */}
+                        <TouchableOpacity
+                            onPress={pickImage}
+                            activeOpacity={0.8}
+                            style={[styles.coverOption, { backgroundColor: 'rgba(56, 189, 248, 0.2)', justifyContent: 'center', alignItems: 'center' }]}
+                        >
+                            <Ionicons name="images-outline" size={32} color="#38BDF8" />
+                            <Text style={{ color: '#38BDF8', fontSize: 10, fontFamily: 'Outfit-Bold', marginTop: 4 }}>Gallery</Text>
+                        </TouchableOpacity>
+
                         {PRESET_COVERS.map((img, idx) => (
                             <TouchableOpacity
                                 key={idx}
@@ -280,14 +305,14 @@ const CreateTripScreen = ({ route }) => {
                                     placeholderTextColor="rgba(255,255,255,0.4)"
                                 />
                             </View>
-                            <TouchableOpacity 
-                                onPress={() => handleRemoveMember(index)} 
+                            <TouchableOpacity
+                                onPress={() => handleRemoveMember(index)}
                                 style={styles.removeMemberBtn}
                             >
-                                <Ionicons 
-                                    name={members.length === 1 && !member ? "close-outline" : "trash-outline"} 
-                                    size={20} 
-                                    color="#EF4444" 
+                                <Ionicons
+                                    name={members.length === 1 && !member ? "close-outline" : "trash-outline"}
+                                    size={20}
+                                    color="#EF4444"
                                 />
                             </TouchableOpacity>
                         </View>
@@ -302,7 +327,7 @@ const CreateTripScreen = ({ route }) => {
 
                     {/* Cancel button for edit mode */}
                     {isEditing && (
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             onPress={() => {
                                 resetForm();
                                 navigation.goBack();
@@ -319,10 +344,9 @@ const CreateTripScreen = ({ route }) => {
     );
 };
 
-const getStyles = (theme) => StyleSheet.create({
+const getStyles = (theme, insets) => StyleSheet.create({
     scrollContent: {
         padding: 20,
-        paddingTop: 60,
         paddingBottom: 40,
     },
     header: {
@@ -330,8 +354,8 @@ const getStyles = (theme) => StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        paddingTop: 60,
-        marginBottom: 20,
+        paddingTop: (insets?.top || 20) + 10,
+        marginBottom: 10,
     },
     backButton: {
         borderRadius: 12,

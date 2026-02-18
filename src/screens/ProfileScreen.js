@@ -7,12 +7,14 @@ import { useTheme } from '../context/ThemeContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import ThemedBackground from '../components/ThemedBackground';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const ProfileScreen = () => {
     const navigation = useNavigation();
     const { theme, toggleTheme, isDark } = useTheme();
     const { user, logout } = useAuth(); // Use Cloud Auth
-    const styles = getStyles(theme);
+    const insets = useSafeAreaInsets();
+    const styles = getStyles(theme, insets);
 
     const handleLogin = () => {
         navigation.navigate('Login');
@@ -149,13 +151,13 @@ const ProfileScreen = () => {
     );
 };
 
-const getStyles = (theme) => StyleSheet.create({
+const getStyles = (theme, insets) => StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        paddingTop: 60,
+        paddingTop: (insets?.top || 20) + 10,
         marginBottom: 20,
     },
     backButton: {

@@ -258,7 +258,13 @@ const TripSummaryScreen = () => {
                             <Text style={styles.sectionTitle}>
                                 {showAllExpenses ? 'All Transactions' : 'Recent Transactions'}
                             </Text>
-                            
+                            {expenses.length > 3 && (
+                                <TouchableOpacity onPress={() => setShowAllExpenses(!showAllExpenses)}>
+                                    <Text style={styles.viewAll}>
+                                        {showAllExpenses ? 'Show Less' : 'View All'}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
                         </View>
                         {/* Floating Action Button */}
                         <View style={styles.fabContainer}>
@@ -342,7 +348,7 @@ const getStyles = (theme, insets) => StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        paddingTop: 60, // Standardized Header Height
+        paddingTop: (insets?.top || 20) + 10, // Standardized Header Height
     },
     glassBtn: {
         width: 40,

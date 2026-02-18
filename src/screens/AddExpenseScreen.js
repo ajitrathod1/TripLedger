@@ -10,13 +10,15 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import ThemedBackground from '../components/ThemedBackground';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const AddExpenseScreen = () => {
     const { addExpense, editExpense, currentTrip } = useTripContext();
     const navigation = useNavigation();
     const route = useRoute();
     const { theme } = useTheme();
-    const styles = getStyles(theme);
+    const insets = useSafeAreaInsets();
+    const styles = getStyles(theme, insets);
 
     const expenseToEdit = route.params?.expenseToEdit;
 
@@ -217,13 +219,13 @@ const AddExpenseScreen = () => {
     );
 };
 
-const getStyles = (theme) => StyleSheet.create({
+const getStyles = (theme, insets) => StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        paddingTop: 60, // Standardized Header Height
+        paddingTop: (insets?.top || 20) + 10, // Dynamic safe area
         marginBottom: 20,
     },
     backButton: {

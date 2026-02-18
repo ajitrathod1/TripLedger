@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, StyleSheet, StatusBar, SafeAreaView, Platform } from 'react-native';
+import { View, StyleSheet, StatusBar, Platform } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors } from '../constants/colors';
 import { useTheme } from '../context/ThemeContext';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const ScreenWrapper = ({ children, style, contentContainerStyle }) => {
     const { theme } = useTheme();
@@ -13,11 +13,13 @@ const ScreenWrapper = ({ children, style, contentContainerStyle }) => {
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }} // Vertical subtle gradient
         >
-            <StatusBar barStyle={theme.statusBar} translucent backgroundColor="transparent" />
+            <StatusBar
+                barStyle={theme.type === 'dark' ? 'light-content' : 'dark-content'}
+                translucent
+                backgroundColor="transparent"
+            />
 
-            {/* Optional light pattern could go here, but keeping it clean for now */}
-
-            <SafeAreaView style={[styles.safeArea, style]}>
+            <SafeAreaView style={[styles.safeArea, style]} edges={['top', 'left', 'right']}>
                 <View style={[styles.content, contentContainerStyle]}>
                     {children}
                 </View>
@@ -32,7 +34,6 @@ const styles = StyleSheet.create({
     },
     safeArea: {
         flex: 1,
-        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
     },
     content: {
         flex: 1,

@@ -9,12 +9,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import CustomButton from '../components/CustomButton';
 import { useTheme } from '../context/ThemeContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SettleUpScreen = () => {
     const navigation = useNavigation();
     const { currentTrip } = useTripContext();
     const { theme } = useTheme();
-    const styles = getStyles(theme);
+    const insets = useSafeAreaInsets();
+    const styles = getStyles(theme, insets);
 
     if (!currentTrip) return null;
 
@@ -230,13 +232,13 @@ const SettleUpScreen = () => {
     );
 };
 
-const getStyles = (theme) => StyleSheet.create({
+const getStyles = (theme, insets) => StyleSheet.create({
     header: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 20,
-        paddingTop: 60,
+        paddingTop: (insets?.top || 20) + 10,
         marginBottom: 20,
     },
     backButton: {
@@ -428,4 +430,3 @@ const getStyles = (theme) => StyleSheet.create({
 });
 
 export default SettleUpScreen;
-

@@ -25,22 +25,12 @@ const GlassView = ({ children, style, intensity = 50, ...props }) => {
     return (
         <View style={containerStyle} {...props}>
             {/* 1. Blur Layer */}
-            {Platform.OS !== 'android' ? (
-                <BlurView
-                    intensity={intensity}
-                    tint={isDark ? 'dark' : 'light'}
-                    style={StyleSheet.absoluteFill}
-                />
-            ) : (
-                // Android fallback or just semi-transparent background if BlurView is buggy
-                // expo-blur works on android but sometimes simple opacity is safer for performance
-                <View
-                    style={[
-                        StyleSheet.absoluteFill,
-                        { backgroundColor: isDark ? 'rgba(15, 23, 42, 0.6)' : 'rgba(255, 255, 255, 0.8)' }
-                    ]}
-                />
-            )}
+            <BlurView
+                intensity={intensity}
+                tint={isDark ? 'dark' : 'light'}
+                style={StyleSheet.absoluteFill}
+                experimentalBlurMethod='dimezisBlurView' // Try enabling this for better Android support if available in this version, or standard
+            />
 
             {/* 2. Gradient Overlay for the "Sheen" */}
             <LinearGradient

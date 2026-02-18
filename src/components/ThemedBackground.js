@@ -9,7 +9,7 @@ const ThemedBackground = ({ children, style }) => {
 
     return (
         <View style={[styles.container, style]}>
-            <StatusBar style={theme.statusBarStyle} />
+            <StatusBar style={theme.statusBarStyle} translucent backgroundColor="transparent" />
             <LinearGradient
                 colors={[theme.gradientStart, theme.gradientEnd, theme.background]}
                 style={StyleSheet.absoluteFill}

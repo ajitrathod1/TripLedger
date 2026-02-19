@@ -16,6 +16,8 @@ export const themes = {
     white: '#FFFFFF',
     gray: '#94A3B8',
     iconDefault: '#FFFFFF',
+    overlay: 'rgba(15, 23, 42, 0.8)',
+    transparent: 'transparent',
 
     // Gradients
     gradientStart: '#0F172A',
@@ -57,6 +59,8 @@ export const themes = {
     white: '#FFFFFF',
     gray: '#94A3B8',
     iconDefault: '#1E293B',
+    overlay: 'rgba(255, 255, 255, 0.8)',
+    transparent: 'transparent',
 
     // Gradients (Subtle Light)
     gradientStart: '#F0F4F8',

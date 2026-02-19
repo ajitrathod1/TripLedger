@@ -103,6 +103,11 @@ TripLedger/
    - Press `w` for Web
    - Or scan QR code with Expo Go app
 
+### Troubleshooting 🔧
+- **White Screen on Launch**: Clear Expo cache using `npx expo start -c`
+- **Firestore Connection Error**: Ensure your IP is whitelisted in Firebase Console if using restricted rules.
+- **Metro Bundler Issues**: Restart the terminal and run `npm start --reset-cache`
+
 ## Usage Guide 📖
 
 ### Creating a Trip

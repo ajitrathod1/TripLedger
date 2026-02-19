@@ -130,6 +130,13 @@ export const isValidAmount = (amount) => {
     return !isNaN(num) && num > 0;
 };
 
+/**
+ * Validate name (at least 2 characters)
+ */
+export const isValidName = (name) => {
+    return name && typeof name === 'string' && name.trim().length >= 2;
+};
+
 // ==================== STRING UTILITIES ====================
 
 /**
@@ -317,6 +324,23 @@ export const throttle = (func, limit = 300) => {
     };
 };
 
+// ==================== ASYNC UTILITIES ====================
+
+/**
+ * Sleep for ms
+ */
+export const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Parse formatted number string back to number
+ */
+export const parseFormattedNumber = (str) => {
+    if (!str) return 0;
+    // Remove currency symbols and commas
+    const cleanStr = str.toString().replace(/[^0-9.]/g, '');
+    return parseFloat(cleanStr) || 0;
+};
+
 // ==================== EXPORT ALL ====================
 
 export default {
@@ -334,6 +358,7 @@ export default {
     isValidEmail,
     isValidPhone,
     isValidAmount,
+    isValidName,
 
     // String
     capitalize,
@@ -360,5 +385,11 @@ export default {
 
     // Performance
     debounce,
-    throttle
+    throttle,
+
+    // Async
+    sleep,
+
+    // Parsers
+    parseFormattedNumber
 };

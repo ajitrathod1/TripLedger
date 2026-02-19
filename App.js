@@ -32,6 +32,12 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
+      {/* 
+        Provider Hierarchy:
+        1. ThemeProvider: Provides theme context (colors, styles)
+        2. AuthProvider: Handles user authentication state
+        3. TripProvider: Manages trip data and operations
+      */}
       <ThemeProvider>
         <AuthProvider>
           <TripProvider>

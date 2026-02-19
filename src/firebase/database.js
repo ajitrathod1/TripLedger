@@ -17,6 +17,20 @@ import {
 } from 'firebase/firestore';
 import { db } from './config';
 
+// ==================== SYSTEM OPERATIONS ====================
+/**
+ * Check Firestore connection
+ */
+export const checkConnection = async () => {
+    try {
+        await getDoc(doc(db, 'users', 'test'));
+        return true;
+    } catch (error) {
+        console.error('❌ Firestore connection failed:', error.code, error.message);
+        return false;
+    }
+};
+
 // ==================== USER OPERATIONS ====================
 
 /**
@@ -152,7 +166,8 @@ export const createTrip = async (userId, tripData) => {
         return { ...trip, id: tripId };
     } catch (error) {
         console.error('❌ Error creating trip:', error);
-        throw error;
+        console.error('Trip Data:', JSON.stringify(tripData));
+        throw new Error(`Failed to create trip: ${error.message}`);
     }
 };
 
@@ -364,7 +379,8 @@ export const addExpense = async (tripId, expenseData) => {
         return expense;
     } catch (error) {
         console.error('❌ Error adding expense:', error);
-        throw error;
+        console.error('Expense Data:', JSON.stringify(expenseData));
+        throw new Error(`Failed to add expense: ${error.message}`);
     }
 };
 

@@ -4,11 +4,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useTheme } from '../context/ThemeContext';
 
-const ThemedBackground = ({ children, style }) => {
-    const { theme, themeType } = useTheme();
+const ThemedBackground = ({ children, style, testID }) => {
+    const { theme } = useTheme();
 
     return (
-        <View style={[styles.container, style]}>
+        <View
+            style={[styles.container, { backgroundColor: theme.background }, style]}
+            testID={testID || 'themed-background'}
+        >
             <StatusBar style={theme.statusBarStyle} translucent backgroundColor="transparent" />
             <LinearGradient
                 colors={[theme.gradientStart, theme.gradientEnd, theme.background]}
@@ -25,4 +28,4 @@ const styles = StyleSheet.create({
     },
 });
 
-export default ThemedBackground;
+export default React.memo(ThemedBackground);
